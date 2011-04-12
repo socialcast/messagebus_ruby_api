@@ -1,0 +1,3 @@
+module Messagebus
+  # Your code goes here...
+end
