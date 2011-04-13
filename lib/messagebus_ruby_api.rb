@@ -2,7 +2,7 @@
 require 'net/https'
 require 'uri'
 
-module Messagebus
+module MessagebusRubyApi
   API_ENDPOINT = URI.parse('https://api.messagebus.com:443')
 
   class APIParameterError < StandardError; end
@@ -27,7 +27,7 @@ module Messagebus
         request = Net::HTTP::Post.new("/send&operation=send&#{to_param(options)}")#, {"User-Agent" => "messagebus.com Messagebus Ruby API v1"})
         http.request(request)
       end
-      raise Messagebus::APIParameterError unless response.body.match(/^OK/)
+      raise MessagebusRubyApi::APIParameterError unless response.body.match(/^OK/)
     end
 
     def to_param(params)

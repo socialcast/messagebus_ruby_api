@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    messagebus (0.0.1)
+    messagebus_ruby_api (0.0.1)
 
 GEM
   remote: http://rubygems.org/
@@ -23,6 +23,6 @@ PLATFORMS
 
 DEPENDENCIES
   fakeweb
-  messagebus!
+  messagebus_ruby_api!
   rr (= 1.0.2)
   rspec (= 2.5.0)

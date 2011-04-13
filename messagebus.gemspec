@@ -1,10 +1,10 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
-require "messagebus/version"
+require "messagebus_ruby_api/version"
 
 Gem::Specification.new do |s|
   s.name        = "messagebus_ruby_api"
-  s.version     = Messagebus::VERSION
+  s.version     = MessagebusRubyApi::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Messagebus dev team"]
   s.email       = ["messagebus@googlegroups.com"]
