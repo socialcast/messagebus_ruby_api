@@ -2,22 +2,21 @@ require 'rubygems'
 require 'fakeweb'
 require 'cgi'
 
-require "messagebus/client"
-require "messagebus/errors"
+require "messagebus"
 
-describe MessageBus::Client do
+describe Messagebus::Client do
   attr_reader :client, :api_key
   before do
     FakeWeb.allow_net_connect = false
 
     @api_key = "3"*32
-    @client = MessageBus::Client.new(api_key)
+    @client = Messagebus::Client.new(api_key)
   end
 
   it "requires an api key" do
     expect do
-      MessageBus::Client.new("foo")
-    end.should raise_error(MessageBus::BadAPIKeyError)
+      Messagebus::Client.new("foo")
+    end.should raise_error(Messagebus::BadAPIKeyError)
   end
 
   it "knows its API key" do
@@ -59,7 +58,7 @@ def expect_api_errors(params, fake_response)
                        :body => fake_response)
   expect do
     client.send_email(params)
-  end.should raise_error(MessageBus::APIParameterError)
+  end.should raise_error(Messagebus::APIParameterError)
 end
 
 def api_url_from_params(url_params)

@@ -6,11 +6,11 @@ Gem::Specification.new do |s|
   s.name        = "messagebus"
   s.version     = Messagebus::VERSION
   s.platform    = Gem::Platform::RUBY
-  s.authors     = ["MessageBus dev team"]
+  s.authors     = ["Messagebus dev team"]
   s.email       = ["messagebus@googlegroups.com"]
   s.homepage    = ""
-  s.summary     = %q{Send email through MessageBus service}
-  s.description = %q{Allows you to use the MessageBus API }
+  s.summary     = %q{Send email through Messagebus service}
+  s.description = %q{Allows you to use the Messagebus API }
 
   s.rubyforge_project = "messagebus"
 
