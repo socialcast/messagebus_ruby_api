@@ -1,6 +1,5 @@
 require 'rubygems'
 require 'fakeweb'
-require 'cgi'
 
 require "messagebus_ruby_api"
 

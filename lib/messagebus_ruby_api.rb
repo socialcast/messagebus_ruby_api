@@ -1,6 +1,7 @@
 #require 'net/http'
 require 'net/https'
 require 'uri'
+require 'cgi'
 
 module MessagebusRubyApi
   API_ENDPOINT = URI.parse('https://api.messagebus.com:443')
