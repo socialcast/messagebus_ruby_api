@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 require "messagebus/version"
 
 Gem::Specification.new do |s|
-  s.name        = "messagebus"
+  s.name        = "messagebus_ruby_api"
   s.version     = Messagebus::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Messagebus dev team"]
@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.summary     = %q{Send email through Messagebus service}
   s.description = %q{Allows you to use the Messagebus API }
 
-  s.rubyforge_project = "messagebus"
+  s.rubyforge_project = "messagebus_ruby_api"
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
