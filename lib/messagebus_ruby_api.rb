@@ -3,14 +3,29 @@ require 'net/https'
 require 'uri'
 require 'cgi'
 
+class String
+  def camelize
+    self.split(/[^a-z0-9]/i).map(&:capitalize).join.tap{|string| string[0,1] = string[0,1].downcase }
+  end
+end
+
 module MessagebusRubyApi
   API_ENDPOINT = URI.parse('https://api.messagebus.com:443')
 
-  class APIParameterError < StandardError; end
-  class BadAPIKeyError < StandardError; end
+  class APIParameterError < StandardError
+    def initialize(problematic_parameter="")
+      super("missing or malformed parameter #{problematic_parameter}")
+    end
+  end
+  class BadAPIKeyError < StandardError;
+  end
 
   class Client
     attr_reader :api_key
+
+    def camelize(string)
+      string.split(/[^a-z0-9]/i).map(&:capitalize).join.tap{|string| string[0,1] = string[0,1].downcase }
+    end
 
     def initialize(api_key)
       @api_key = verified_reasonable_api_key(api_key)
@@ -22,17 +37,23 @@ module MessagebusRubyApi
       Net::HTTP.new(API_ENDPOINT.host, API_ENDPOINT.port)
     end
 
+    def api_request(options)
+      Net::HTTP::Post.new("/send?operation=send&#{to_param(options)}") #, {"User-Agent" => "messagebus.com Messagebus Ruby API v1"})
+    end
+
     def send_email(options)
-      raise APIParameterError unless verify_required_params(options)
+      verify_required_params(options)
       response = @http.start do |http|
-        request = Net::HTTP::Post.new("/send&operation=send&#{to_param(options)}")#, {"User-Agent" => "messagebus.com Messagebus Ruby API v1"})
+        request = api_request(options)
+#        pp request.
         http.request(request)
       end
+#      puts response.body
       raise MessagebusRubyApi::APIParameterError unless response.body.match(/^OK/)
     end
 
     def to_param(params)
-      params.map{|name,val|[name.to_s,val]}.sort.map { |param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}" }.join("&")
+      params.map { |name, val| [name.to_s.camelize, val] }.sort.map{|param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}"}.join("&")
     end
 
     private
@@ -43,7 +64,10 @@ module MessagebusRubyApi
     end
 
     def verify_required_params(params)
-      params[:to_email] && params[:from_email] && params[:body] && params[:subject]
+      raise APIParameterError.new("to_email") unless params[:to_email]
+      raise APIParameterError.new("from_email") unless params[:from_email]
+      raise APIParameterError.new("subject") unless params[:subject]
+      raise APIParameterError.new("body") unless params[:body]
     end
   end
 end
