@@ -1,10 +1,4 @@
-require 'rubygems'
-require 'fakeweb'
-
-#dir = File.dirname(__FILE__)
-require "spec_core_extensions"
-
-require "messagebus_ruby_api"
+require 'spec_helper'
 
 describe MessagebusRubyApi::Client do
   attr_reader :client, :api_key, :required_params
@@ -24,10 +18,6 @@ describe MessagebusRubyApi::Client do
 
   it "knows its API key" do
     client.api_key.should == api_key
-  end
-
-  it "should include the correct operation param" do
-
   end
 
   describe "required parameters" do
@@ -73,38 +63,45 @@ describe MessagebusRubyApi::Client do
       expect_api_success(required_params.merge(:tag => "weekly"))
     end
 
-    describe "allows plain_text" do
-      it "is happy with true or false as the value" do
-        expect_api_success(required_params.merge(:plain_text => true))
-      end
+    it "allows priority with values 1 through 5" do
+      expect_api_success(required_params.merge(:priority => 1))
+      expect_api_success(required_params.merge(:priority => 2))
+      expect_api_success(required_params.merge(:priority => 3))
+      expect_api_success(required_params.merge(:priority => 4))
+      expect_api_success(required_params.merge(:priority => 5))
 
-      it "raises a param error if anything besides true or false" do
-        api_response = "doesn't matter"
-        expect do
-          expect_api_errors(required_params.without(:body), api_response, "body")
-        end.should raise_error(APIParameterError.new("plain_text can only be true or false"))
-      end
-    end
-  end
-
-  describe "other params" do
-    before do
-      FakeWeb.allow_net_connect = true
-    end
-
-    after do
-      FakeWeb.allow_net_connect = false
-    end
-
-    it "raises an error when missing implicit parameters" do
-      params = {:to_email => "bob@example.com", :from_email => "sally@example.com", :body => "a nice ocean", :subject => "test subject"}
-      api_response = "ERR: blam"
-      url_params = client.to_param(params)
-      full_url = "https://api.messagebus.com/send?#{url_params}"
-      FakeWeb.register_uri(:post, full_url, :body => api_response)
       expect do
-        client.send_email(params)
-      end.should raise_error(MessagebusRubyApi::UnknownError)
+        client.send_email(required_params.merge(:priority => "foo"))
+      end.should raise_error(MessagebusRubyApi::APIParameterError)
+
+      expect do
+        client.send_email(required_params.merge(:priority => 0))
+      end.should raise_error(MessagebusRubyApi::APIParameterError)
+
+      expect do
+        client.send_email(required_params.merge(:priority => 6))
+      end.should raise_error(MessagebusRubyApi::APIParameterError)
+    end
+
+    it "allows reply_to" do
+      expect_api_success(required_params.merge(:reply_to => "obiwan@example.com"))
+    end
+
+    it "allows unsubscribe_email" do
+      expect_api_success(required_params.merge(:unsubscribe_email => "unsubscribe@aol.com"))
+    end
+
+    it "allows unsubscribe_url" do
+      expect_api_success(required_params.merge(:unsubscribe_url => "http://foobar.com/unsubscribe"))
+    end
+
+    it "allows plain_text" do
+      expect_api_success(required_params.merge(:plain_text => false))
+      expect_api_success(required_params.merge(:plain_text => true))
+
+      expect do
+        client.send_email(required_params.merge(:plain_text => "omg not a boolean or nil"))
+      end.should raise_error(MessagebusRubyApi::APIParameterError)
     end
   end
 
@@ -116,7 +113,7 @@ describe MessagebusRubyApi::Client do
 end
 
 def expect_api_success(params)
-  expected_url = api_url_from_params(client.to_param(params))
+  expected_url = api_url_from_params(client.to_param(client.check_params(params.dup)))
   FakeWeb.register_uri(:post, expected_url, :body => "OK:OK")
   expect do
     response = client.send_email(params)
@@ -125,8 +122,8 @@ def expect_api_success(params)
 end
 
 def expect_api_errors(params, fake_response, expected_error_message="")
-  url_params = client.to_param(params)
-  FakeWeb.register_uri(:post, api_url_from_params(url_params),
+  expected_params = client.to_param(params.dup)
+  FakeWeb.register_uri(:post, api_url_from_params(expected_params),
                        :body => fake_response)
   expect do
     client.send_email(params)
