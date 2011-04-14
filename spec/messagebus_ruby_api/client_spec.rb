@@ -73,18 +73,18 @@ describe MessagebusRubyApi::Client do
       expect_api_success(required_params.merge(:tag => "weekly"))
     end
 
-#    describe "allows plain_text" do
-#      it "is happy with true or false as the value" do
-#        expect_api_success(required_params.merge(:plain_text => true))
-#      end
-#
-#      it "raises a param error if anything besides true or false" do
-#        api_response = "doesn't matter"
-#        expect do
-#          expect_api_errors(required_params.without(:body), api_response, "body")
-#        end.should raise_error(APIParameterError.new("plain_text can only be true or false"))
-#      end
-#    end
+    describe "allows plain_text" do
+      it "is happy with true or false as the value" do
+        expect_api_success(required_params.merge(:plain_text => true))
+      end
+
+      it "raises a param error if anything besides true or false" do
+        api_response = "doesn't matter"
+        expect do
+          expect_api_errors(required_params.without(:body), api_response, "body")
+        end.should raise_error(APIParameterError.new("plain_text can only be true or false"))
+      end
+    end
   end
 
   describe "other params" do
