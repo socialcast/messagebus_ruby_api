@@ -58,7 +58,7 @@ module MessagebusRubyApi
     end
 
     def verified_reasonable_api_key(api_key)
-      raise BadAPIKeyError unless api_key.match(/[a-zA-Z0-9]{20}/)
+      raise BadAPIKeyError unless api_key.match(/^[a-zA-Z0-9]{32}$/)
       api_key
     end
 

@@ -12,6 +12,10 @@ describe MessagebusRubyApi::Client do
 
   it "requires an api key" do
     expect do
+      MessagebusRubyApi::Client.new("3"*32)
+    end.should_not raise_error(MessagebusRubyApi::BadAPIKeyError)
+
+    expect do
       MessagebusRubyApi::Client.new("foo")
     end.should raise_error(MessagebusRubyApi::BadAPIKeyError)
   end
