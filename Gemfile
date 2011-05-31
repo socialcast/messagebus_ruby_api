@@ -1,7 +1,5 @@
 source "http://rubygems.org"
 
-
-
 group :test, :development do
   gem 'rspec', '2.5.0'
   gem 'rr', '1.0.2'
