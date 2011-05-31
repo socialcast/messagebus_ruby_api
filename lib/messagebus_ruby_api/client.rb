@@ -42,7 +42,7 @@ module MessagebusRubyApi
     end
 
     def to_param(params)
-      params.map { |name, val| [name.to_s.camelize, val] }.sort.map { |param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}" }.join("&")
+      params.map { |name, val| [name.to_s.mb_camelize, val] }.sort.map { |param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}" }.join("&")
     end
 
     private
