@@ -2,9 +2,7 @@ module MessagebusRubyApi
   DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443'
 
   class Client
-    attr_reader :api_key
-    attr_reader :endpoint_url
-    attr_accessor :http
+    attr_reader :api_key, :endpoint_url, :http
 
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
@@ -23,6 +21,7 @@ module MessagebusRubyApi
       verify_required_params(options)
       response = @http.start do |http|
         request = api_request(options)
+        request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
         http.request(request)
       end
       case response
@@ -48,6 +47,10 @@ module MessagebusRubyApi
 
     def to_param(params)
       params.map { |name, val| [name.to_s, val] }.sort.map { |param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}" }.join("&")
+    end
+
+    def basic_auth_credentials=(credentials)
+      @credentials = credentials
     end
 
     private

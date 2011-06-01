@@ -142,6 +142,18 @@ describe MessagebusRubyApi::Client do
       end.should raise_error(MessagebusRubyApi::RemoteServerError, "ERR:Remote Server Returned: 404")
     end
   end
+
+  describe "#basic_auth_credentials=" do
+    it "uses basic auth with the supplied credentials" do
+      client.basic_auth_credentials = {:user => "user", :password => "pass"}
+      url_params = client.to_param(required_params)
+      FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "Unauthorized", :status => ["401", "Unauthorized"])
+      FakeWeb.register_uri(:post, "https://user:pass@api.messagebus.com/send?operation=sendEmail&apiKey=#{api_key}&#{url_params}", :body => "OK:OK")
+      expect do
+        client.send_email(required_params)
+      end.should_not raise_error
+    end
+  end
 end
 
 def expect_api_success(params)
