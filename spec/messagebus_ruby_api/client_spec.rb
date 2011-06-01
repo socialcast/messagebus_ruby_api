@@ -114,6 +114,25 @@ describe MessagebusRubyApi::Client do
       client.to_param({:toEmail => "bob@example.com", :fromEmail => "alex@example.com"}).should == "fromEmail=alex%40example.com&toEmail=bob%40example.com"
     end
   end
+
+  describe "server errors" do
+    it "raises an error with the error status received by the server" do
+      url_params = client.to_param(required_params)
+      error_response_body = "ERR:Some meaningful remote error"
+      FakeWeb.register_uri(:post, api_url_from_params(url_params), status: [500, ""], :body => error_response_body)
+      expect do
+        client.send_email(required_params)
+      end.should raise_error(MessagebusRubyApi::RemoteServerError, error_response_body)
+    end
+
+    it "raises an error if the remote server returns a status other than 200 OK" do
+      url_params = client.to_param(required_params)
+      FakeWeb.register_uri(:post, api_url_from_params(url_params), :status => [404, "Not Found"], :body => "")
+      expect do
+        client.send_email(required_params)
+      end.should raise_error(MessagebusRubyApi::RemoteServerError, "ERR:Remote Server Returned: 404")
+    end
+  end
 end
 
 def expect_api_success(params)

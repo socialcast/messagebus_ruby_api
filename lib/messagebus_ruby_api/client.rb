@@ -30,9 +30,19 @@ module MessagebusRubyApi
         request = api_request(options)
         http.request(request)
       end
-
-      raise MessagebusRubyApi::UnknownError unless response.body.match(/^OK/)
-      response
+      case response
+        when Net::HTTPSuccess
+          return response
+        when Net::HTTPClientError, Net::HTTPServerError
+          if (response.body && response.body.size > 0)
+            raise MessagebusRubyApi::RemoteServerError.new(response.body)
+          else
+            raise MessagebusRubyApi::RemoteServerError.new("ERR:Remote Server Returned: #{response.code.to_s}")
+          end
+        else
+          raise "Unexpected HTTP Response: #{response.class.name}"
+      end
+      raise "Could not determine response"
     end
 
     def check_params(params)

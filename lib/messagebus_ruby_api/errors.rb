@@ -6,10 +6,13 @@ module MessagebusRubyApi
     end
   end
 
-  class BadAPIKeyError < StandardError;
+  class BadAPIKeyError < StandardError
   end
 
-  class UnknownError < StandardError;
+  class RemoteServerError < StandardError
+    def initialize(message)
+      super
+    end
   end
   
 end
