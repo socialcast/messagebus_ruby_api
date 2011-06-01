@@ -24,6 +24,15 @@ describe MessagebusRubyApi::Client do
     client.api_key.should == api_key
   end
 
+  it "defaults the endpoint URL if one is not supplied" do
+    @client.endpoint_url.host.should =~ /api\.messagebus\.com/
+  end
+
+  it "talks to the supplied endpoint url" do
+    another_client = MessagebusRubyApi::Client.new(api_key, "http://localhost:8080")
+    another_client.endpoint_url.host.should =~ /localhost/
+  end
+
   describe "required parameters" do
     it "works when the minimum params are sent" do
       url_params = client.to_param(required_params)

@@ -1,27 +1,21 @@
 module MessagebusRubyApi
-  API_ENDPOINT = URI.parse('https://api.messagebus.com:443')
+  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443'
 
   class Client
     attr_reader :api_key
+    attr_reader :endpoint_url
 
-    def initialize(api_key)
+    def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
-      @http = api_endpoint_http_connection
+      @endpoint_url = URI.parse(endpoint_url_string)
+      @http = api_endpoint_http_connection(endpoint_url)
       @http.use_ssl = true
-    end
-
-    def api_endpoint_http_connection
-      Net::HTTP.new(API_ENDPOINT.host, API_ENDPOINT.port)
     end
 
     def complete_url(options)
       params_string = to_param(check_params(options))
       url = "/send?operation=sendEmail&#{params_string}&apiKey=#{api_key}"
       url
-    end
-
-    def api_request(options)
-      Net::HTTP::Post.new(complete_url(options)) #, {"User-Agent" => "messagebus.com Messagebus Ruby API v1"})
     end
 
     def send_email(options)
@@ -56,6 +50,14 @@ module MessagebusRubyApi
     end
 
     private
+
+    def api_request(options)
+      Net::HTTP::Post.new(complete_url(options)) #, {"User-Agent" => "messagebus.com Messagebus Ruby API v1"})
+    end    
+
+    def api_endpoint_http_connection(endpoint_url)
+      Net::HTTP.new(endpoint_url.host, endpoint_url.port)
+    end
 
     def check_plain_text(plain_text)
       raise APIParameterError.new(":plainText can only be true or false, not \"#{plain_text}\" of type #{plain_text.class}") unless [true, false].include?(plain_text)
