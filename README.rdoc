@@ -1,0 +1,53 @@
+= Messagebus Ruby API
+
+== Installation
+
+  bundle install messagebus_ruby_api
+
+
+== Examples
+
+Start by requiring MessagebusRubyApi:
+
+  require 'messagebus_ruby_api'
+
+=== Create the Api Client with your API key
+
+  client = MessagebusRubyApi::Client.new("<INSERT_YOUR_API_KEY>")
+
+
+=== Required Parameters
+
+    required_params = {
+      :subject => "e-mail subject",
+      :body => "This is the email body",
+      :fromEmail => "from@example.com",
+      :toEmail => "to@example.com"
+    }
+
+=== Optional Parameters
+
+    optional_params = {
+      :fromName => "From Name",
+      :toName => "To Name",
+      :tag => "tags separated by spaces"
+    }
+
+=== Sending an e-mail with the client
+
+    @params = {
+      :subject => "e-mail subject",
+      :body => "This is the email body",
+      :fromEmail => "from@example.com",
+      :toEmail => "to@example.com"
+    }
+
+    response = client.send_email(@params)
+    puts "API call failed" unless response.body =~ /^OK:(.*)$/
+
+
+== More info
+
+Contact MessageBus if you have questions or problems (https://www.messagebus.com/contact)
+
+
