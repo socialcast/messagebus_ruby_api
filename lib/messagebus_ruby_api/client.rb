@@ -16,7 +16,7 @@ module MessagebusRubyApi
 
     def complete_url(options)
       params_string = to_param(check_params(options))
-      url = "/send?operation=sendEmail&#{params_string}"
+      url = "/send?operation=sendEmail&#{params_string}&apiKey=#{api_key}"
       url
     end
 

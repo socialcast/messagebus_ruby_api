@@ -154,5 +154,5 @@ def expect_api_errors(params, fake_response, expected_error_message="")
 end
 
 def api_url_from_params(url_param_string)
-  "https://api.messagebus.com/send?operation=sendEmail&#{url_param_string}"
+  "https://api.messagebus.com/send?operation=sendEmail&apiKey=#{api_key}&#{url_param_string}"
 end
