@@ -7,7 +7,7 @@ describe MessagebusRubyApi::Client do
 
     @api_key = "3"*32
     @client = MessagebusRubyApi::Client.new(api_key)
-    @required_params = {:to_email => "bob@example.com", :from_email => "alice@example.com", :body => "a nice ocean", :subject => "test subject"}
+    @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :body => "a nice ocean", :subject => "test subject"}
   end
 
   it "requires an api key" do
@@ -35,12 +35,12 @@ describe MessagebusRubyApi::Client do
 
     it "raises errors when missing to_email param" do
       api_response = "ERR :Missing required paramater toEmail"
-      expect_api_errors(required_params.without(:to_email), api_response, "to_email")
+      expect_api_errors(required_params.without(:toEmail), api_response, "toEmail")
     end
 
     it "raises errors when missing from_email param" do
       api_response = "ERR:Missing required paramater fromEmail"
-      expect_api_errors(required_params.without(:from_email), api_response, "from_email")
+      expect_api_errors(required_params.without(:fromEmail), api_response, "fromEmail")
     end
 
     it "raises errors when missing subject param" do
@@ -56,11 +56,11 @@ describe MessagebusRubyApi::Client do
 
   describe "optional parameters" do
     it "allows to_name" do
-      expect_api_success(required_params.merge(:to_name => "Chuck Norris"))
+      expect_api_success(required_params.merge(:toName => "Chuck Norris"))
     end
 
     it "allows from_name" do
-      expect_api_success(required_params.merge(:from_name => "Sally Norris"))
+      expect_api_success(required_params.merge(:fromName => "Sally Norris"))
     end
 
     it "allows tag" do
@@ -88,30 +88,30 @@ describe MessagebusRubyApi::Client do
     end
 
     it "allows reply_to" do
-      expect_api_success(required_params.merge(:reply_to => "obiwan@example.com"))
+      expect_api_success(required_params.merge(:replyTo => "obiwan@example.com"))
     end
 
     it "allows unsubscribe_email" do
-      expect_api_success(required_params.merge(:unsubscribe_email => "unsubscribe@aol.com"))
+      expect_api_success(required_params.merge(:unsubscribeEmail => "unsubscribe@aol.com"))
     end
 
     it "allows unsubscribe_url" do
-      expect_api_success(required_params.merge(:unsubscribe_url => "http://foobar.com/unsubscribe"))
+      expect_api_success(required_params.merge(:unsubscribeUrl => "http://foobar.com/unsubscribe"))
     end
 
     it "allows plain_text" do
-      expect_api_success(required_params.merge(:plain_text => false))
-      expect_api_success(required_params.merge(:plain_text => true))
+      expect_api_success(required_params.merge(:plainText => false))
+      expect_api_success(required_params.merge(:plainText => true))
 
       expect do
-        client.send_email(required_params.merge(:plain_text => "omg not a boolean or nil"))
+        client.send_email(required_params.merge(:plainText => "omg not a boolean or nil"))
       end.should raise_error(MessagebusRubyApi::APIParameterError)
     end
   end
 
   describe "#to_param" do
-    it "camelizes param names and sorts them" do
-      client.to_param({:to_email => "bob@example.com", :from_email => "alex@example.com"}).should == "fromEmail=alex%40example.com&toEmail=bob%40example.com"
+    it "converts to param names and sorts them" do
+      client.to_param({:toEmail => "bob@example.com", :fromEmail => "alex@example.com"}).should == "fromEmail=alex%40example.com&toEmail=bob%40example.com"
     end
   end
 end

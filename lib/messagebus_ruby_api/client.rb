@@ -36,19 +36,19 @@ module MessagebusRubyApi
     end
 
     def check_params(params)
-      params[:plain_text] = check_plain_text(params[:plain_text]) unless params[:plain_text].nil?
+      params[:plainText] = check_plain_text(params[:plainText]) unless params[:plainText].nil?
       params[:priority] = check_priority(params[:priority]) unless params[:priority].nil?
       params
     end
 
     def to_param(params)
-      params.map { |name, val| [name.to_s.mb_camelize, val] }.sort.map { |param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}" }.join("&")
+      params.map { |name, val| [name.to_s, val] }.sort.map { |param_name, param_value| "#{CGI.escape(param_name)}=#{CGI.escape(param_value)}" }.join("&")
     end
 
     private
 
     def check_plain_text(plain_text)
-      raise APIParameterError.new(":plain_text can only be true or false, not \"#{plain_text}\" of type #{plain_text.class}") unless [true, false].include?(plain_text)
+      raise APIParameterError.new(":plainText can only be true or false, not \"#{plain_text}\" of type #{plain_text.class}") unless [true, false].include?(plain_text)
       plain_text ? "1" : "0"
     end
 
@@ -63,8 +63,8 @@ module MessagebusRubyApi
     end
 
     def verify_required_params(params)
-      raise APIParameterError.new("to_email") unless params[:to_email]
-      raise APIParameterError.new("from_email") unless params[:from_email]
+      raise APIParameterError.new("toEmail") unless params[:toEmail]
+      raise APIParameterError.new("fromEmail") unless params[:fromEmail]
       raise APIParameterError.new("subject") unless params[:subject]
       raise APIParameterError.new("body") unless params[:body]
     end
