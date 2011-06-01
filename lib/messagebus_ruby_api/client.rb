@@ -4,6 +4,7 @@ module MessagebusRubyApi
   class Client
     attr_reader :api_key
     attr_reader :endpoint_url
+    attr_accessor :http
 
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
