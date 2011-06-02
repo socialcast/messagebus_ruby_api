@@ -2,7 +2,7 @@
 
 == Installation
 
-  bundle install messagebus_ruby_api
+  gem install messagebus_ruby_api
 
 
 == Examples
