@@ -1,6 +1,8 @@
+dir = File.dirname(__FILE__)
+
 require 'net/https'
 require 'uri'
 require 'cgi'
 
-require 'messagebus_ruby_api/errors'
-require 'messagebus_ruby_api/client'
+require "#{dir}/messagebus_ruby_api/errors"
+require "#{dir}/messagebus_ruby_api/client"

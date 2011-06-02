@@ -1,4 +1,5 @@
-require 'spec_helper'
+dir = File.dirname(__FILE__)
+require "#{dir}/../spec_helper"
 
 describe MessagebusRubyApi::Client do
   attr_reader :client, :api_key, :required_params
