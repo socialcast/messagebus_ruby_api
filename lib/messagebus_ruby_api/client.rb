@@ -1,5 +1,5 @@
 module MessagebusRubyApi
-  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443/v1'
+  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443'
 
   class Client
     attr_reader :api_key, :endpoint_url, :http
@@ -13,7 +13,7 @@ module MessagebusRubyApi
 
     def complete_url(options)
       params_string = to_param(check_params(options))
-      url = "/send?operation=sendEmail&#{params_string}&apiKey=#{api_key}"
+      url = "/v1/send?operation=sendEmail&#{params_string}&apiKey=#{api_key}"
       url
     end
 

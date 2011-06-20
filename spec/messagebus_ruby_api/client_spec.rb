@@ -29,10 +29,6 @@ describe MessagebusRubyApi::Client do
     @client.endpoint_url.host.should =~ /api\.messagebus\.com/
   end
 
-  it "has the version number in the default endpoint url" do
-    @client.endpoint_url.to_s.should =~ /v1/
-  end
-
   it "talks to the supplied endpoint url" do
     another_client = MessagebusRubyApi::Client.new(api_key, "http://localhost:8080/v1")
     another_client.endpoint_url.host.should =~ /localhost/
@@ -152,7 +148,7 @@ describe MessagebusRubyApi::Client do
       client.basic_auth_credentials = {:user => "user", :password => "pass"}
       url_params = client.to_param(required_params)
       FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "Unauthorized", :status => ["401", "Unauthorized"])
-      FakeWeb.register_uri(:post, "https://user:pass@api.messagebus.com/send?operation=sendEmail&apiKey=#{api_key}&#{url_params}", :body => "OK:OK")
+      FakeWeb.register_uri(:post, "https://user:pass@api.messagebus.com/v1/send?operation=sendEmail&apiKey=#{api_key}&#{url_params}", :body => "OK:OK")
       expect do
         client.send_email(required_params)
       end.should_not raise_error
@@ -179,5 +175,5 @@ def expect_api_errors(params, fake_response, expected_error_message="")
 end
 
 def api_url_from_params(url_param_string)
-  "https://api.messagebus.com/send?operation=sendEmail&apiKey=#{api_key}&#{url_param_string}"
+  "https://api.messagebus.com/v1/send?operation=sendEmail&apiKey=#{api_key}&#{url_param_string}"
 end
