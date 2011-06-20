@@ -8,7 +8,7 @@ describe MessagebusRubyApi::Client do
 
     @api_key = "3"*32
     @client = MessagebusRubyApi::Client.new(api_key)
-    @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :body => "a nice ocean", :subject => "test subject"}
+    @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :plaintext_body => "a nice ocean", :subject => "test subject"}
   end
 
   it "requires an api key" do
@@ -29,14 +29,26 @@ describe MessagebusRubyApi::Client do
     @client.endpoint_url.host.should =~ /api\.messagebus\.com/
   end
 
+  it "has the version number in the default endpoint url" do
+    @client.endpoint_url.to_s.should =~ /v1/
+  end
+
   it "talks to the supplied endpoint url" do
-    another_client = MessagebusRubyApi::Client.new(api_key, "http://localhost:8080")
+    another_client = MessagebusRubyApi::Client.new(api_key, "http://localhost:8080/v1")
     another_client.endpoint_url.host.should =~ /localhost/
   end
 
   describe "required parameters" do
     it "works when the minimum params are sent" do
       url_params = client.to_param(required_params)
+      FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "OK:OK")
+      expect do
+        client.send_email(required_params)
+      end.should_not raise_error
+    end
+
+    it "works when an html body is supplied with no plaintext_body" do
+      url_params = client.to_param(required_params.without(:plaintext_body).merge(:html_body => '<html>This is a test email</html>'))
       FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "OK:OK")
       expect do
         client.send_email(required_params)
@@ -58,9 +70,9 @@ describe MessagebusRubyApi::Client do
       expect_api_errors(required_params.without(:subject), api_response, "subject")
     end
 
-    it "raises errors when missing body param" do
+    it "raises errors when missing both body params" do
       api_response = "ERR:Missing required paramater body"
-      expect_api_errors(required_params.without(:body), api_response, "body")
+      expect_api_errors(required_params.without(:plaintext_body), api_response, "plaintext_body or html_body")
     end
   end
 
@@ -107,15 +119,6 @@ describe MessagebusRubyApi::Client do
 
     it "allows unsubscribe_url" do
       expect_api_success(required_params.merge(:unsubscribeUrl => "http://foobar.com/unsubscribe"))
-    end
-
-    it "allows plain_text" do
-      expect_api_success(required_params.merge(:plainText => false))
-      expect_api_success(required_params.merge(:plainText => true))
-
-      expect do
-        client.send_email(required_params.merge(:plainText => "omg not a boolean or nil"))
-      end.should raise_error(MessagebusRubyApi::APIParameterError)
     end
   end
 

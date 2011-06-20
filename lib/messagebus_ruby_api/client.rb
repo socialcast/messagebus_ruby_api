@@ -1,5 +1,5 @@
 module MessagebusRubyApi
-  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443'
+  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443/v1'
 
   class Client
     attr_reader :api_key, :endpoint_url, :http
@@ -40,7 +40,6 @@ module MessagebusRubyApi
     end
 
     def check_params(params)
-      params[:plainText] = check_plain_text(params[:plainText]) unless params[:plainText].nil?
       params[:priority] = check_priority(params[:priority]) unless params[:priority].nil?
       params
     end
@@ -63,11 +62,6 @@ module MessagebusRubyApi
       Net::HTTP.new(endpoint_url.host, endpoint_url.port)
     end
 
-    def check_plain_text(plain_text)
-      raise APIParameterError.new(":plainText can only be true or false, not \"#{plain_text}\" of type #{plain_text.class}") unless [true, false].include?(plain_text)
-      plain_text ? "1" : "0"
-    end
-
     def check_priority(priority)
       raise APIParameterError.new(":priority can only be an integer between 1 and 5, not \"#{priority}\"") unless priority.is_a?(Integer) && (1..5).include?(priority)
       priority.to_s
@@ -82,7 +76,7 @@ module MessagebusRubyApi
       raise APIParameterError.new("toEmail") unless params[:toEmail]
       raise APIParameterError.new("fromEmail") unless params[:fromEmail]
       raise APIParameterError.new("subject") unless params[:subject]
-      raise APIParameterError.new("body") unless params[:body]
+      raise APIParameterError.new("plaintext_body or html_body") unless params[:plaintext_body] || params[:html_body]
     end
   end
 end
