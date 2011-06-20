@@ -76,7 +76,7 @@ module MessagebusRubyApi
       raise APIParameterError.new("toEmail") unless params[:toEmail]
       raise APIParameterError.new("fromEmail") unless params[:fromEmail]
       raise APIParameterError.new("subject") unless params[:subject]
-      raise APIParameterError.new("plaintext_body or html_body") unless params[:plaintext_body] || params[:html_body]
+      raise APIParameterError.new("plaintextBody or htmlBody") unless params[:plaintextBody] || params[:htmlBody]
     end
   end
 end

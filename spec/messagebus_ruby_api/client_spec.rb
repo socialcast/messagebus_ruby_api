@@ -8,7 +8,7 @@ describe MessagebusRubyApi::Client do
 
     @api_key = "3"*32
     @client = MessagebusRubyApi::Client.new(api_key)
-    @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :plaintext_body => "a nice ocean", :subject => "test subject"}
+    @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :plaintextBody => "a nice ocean", :subject => "test subject"}
   end
 
   it "requires an api key" do
@@ -48,7 +48,7 @@ describe MessagebusRubyApi::Client do
     end
 
     it "works when an html body is supplied with no plaintext_body" do
-      url_params = client.to_param(required_params.without(:plaintext_body).merge(:html_body => '<html>This is a test email</html>'))
+      url_params = client.to_param(required_params.without(:plaintextBody).merge(:htmlBody => '<html>This is a test email</html>'))
       FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "OK:OK")
       expect do
         client.send_email(required_params)
@@ -72,7 +72,7 @@ describe MessagebusRubyApi::Client do
 
     it "raises errors when missing both body params" do
       api_response = "ERR:Missing required paramater body"
-      expect_api_errors(required_params.without(:plaintext_body), api_response, "plaintext_body or html_body")
+      expect_api_errors(required_params.without(:plaintextBody), api_response, "plaintextBody or htmlBody")
     end
   end
 
