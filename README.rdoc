@@ -20,7 +20,7 @@ Start by requiring MessagebusRubyApi:
 
     required_params = {
       :subject => "e-mail subject",
-      :body => "This is the email body",
+      :plaintextBody => "This is the email body", # Note: an htmlBody can also be specified either in addition to or instead of plaintextBody
       :fromEmail => "from@example.com",
       :toEmail => "to@example.com"
     }
@@ -37,7 +37,7 @@ Start by requiring MessagebusRubyApi:
 
     @params = {
       :subject => "e-mail subject",
-      :body => "This is the email body",
+      :plaintextBody => "This is the email body",
       :fromEmail => "from@example.com",
       :toEmail => "to@example.com"
     }
@@ -45,6 +45,9 @@ Start by requiring MessagebusRubyApi:
     response = client.send_email(@params)
     puts "API call failed" unless response.body =~ /^OK:(.*)$/
 
+== Older Versions
+
+  If you are using the old api with the 'body' parameter (instead of the new 'plaintextBody' and 'htmlBody' parameters), please be sure to get the 'v0' branch
 
 == More info
 
