@@ -9,6 +9,17 @@ describe MessagebusRubyApi::Client do
     @api_key = "3"*32
     @client = MessagebusRubyApi::Client.new(api_key)
     @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :plaintextBody => "a nice ocean", :subject => "test subject"}
+    @success_result = {
+      "statusMessage" => "OK",
+      "successCount" => 1,
+      "failureCount" => 0,
+      "results" => [
+        {
+          "status" => 200,
+          "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
+        }
+      ]
+    }
   end
 
   it "requires an api key" do
@@ -36,39 +47,42 @@ describe MessagebusRubyApi::Client do
 
   describe "required parameters" do
     it "works when the minimum params are sent" do
-      url_params = client.to_param(required_params)
-      FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "OK:OK")
+      FakeWeb.register_uri(:post, api_url, :body => @success_result.to_json)
+      response = nil
       expect do
-        client.send_email(required_params)
+        response = client.send_email(required_params)
       end.should_not raise_error
+      response[:successCount].should == 1
     end
 
     it "works when an html body is supplied with no plaintext_body" do
-      url_params = client.to_param(required_params.without(:plaintextBody).merge(:htmlBody => '<html>This is a test email</html>'))
-      FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "OK:OK")
+      params = required_params.without(:plaintextBody).merge(:htmlBody => '<html>This is a test email</html>')
+      FakeWeb.register_uri(:post, api_url, :body => @success_result.to_json)
+      response = nil
       expect do
-        client.send_email(required_params)
+        response = client.send_email(params)
       end.should_not raise_error
+      response[:successCount].should == 1
     end
 
     it "raises errors when missing to_email param" do
-      api_response = "ERR :Missing required paramater toEmail"
-      expect_api_errors(required_params.without(:toEmail), api_response, "toEmail")
+      api_response = "missing or malformed parameter toEmail"
+      expect_api_parameter_errors(required_params.without(:toEmail), api_response, "toEmail")
     end
 
     it "raises errors when missing from_email param" do
-      api_response = "ERR:Missing required paramater fromEmail"
-      expect_api_errors(required_params.without(:fromEmail), api_response, "fromEmail")
+      api_response = "missing or malformed parameter fromEmail"
+      expect_api_parameter_errors(required_params.without(:fromEmail), api_response, "fromEmail")
     end
 
     it "raises errors when missing subject param" do
-      api_response = "ERR:Missing required paramater subject"
-      expect_api_errors(required_params.without(:subject), api_response, "subject")
+      api_response = "missing or malformed parameter subject"
+      expect_api_parameter_errors(required_params.without(:subject), api_response, "subject")
     end
 
-    it "raises errors when missing both body params" do
-      api_response = "ERR:Missing required paramater body"
-      expect_api_errors(required_params.without(:plaintextBody), api_response, "plaintextBody or htmlBody")
+    it "raises errors when missing plaintext body param" do
+      api_response = "missing or malformed parameter plaintextBody or htmlBody"
+      expect_api_parameter_errors(required_params.without(:plaintextBody), api_response, "plaintextBody or htmlBody")
     end
   end
 
@@ -118,37 +132,45 @@ describe MessagebusRubyApi::Client do
     end
   end
 
-  describe "#to_param" do
-    it "converts to param names and sorts them" do
-      client.to_param({:toEmail => "bob@example.com", :fromEmail => "alex@example.com"}).should == "fromEmail=alex%40example.com&toEmail=bob%40example.com"
-    end
-  end
-
   describe "server errors" do
     it "raises an error with the error status received by the server" do
-      url_params = client.to_param(required_params)
-      error_response_body = "ERR:Some meaningful remote error"
-      FakeWeb.register_uri(:post, api_url_from_params(url_params), status: [500, ""], :body => error_response_body)
+      error_response_body = failure_result("Some meaningful remote error").to_json
+      FakeWeb.register_uri(:post, api_url, status: [500, ""], :body => error_response_body)
       expect do
         client.send_email(required_params)
-      end.should raise_error(MessagebusRubyApi::RemoteServerError, error_response_body)
+      end.should raise_error(MessagebusRubyApi::RemoteServerError, "Remote Server Returned: 500.  Some meaningful remote error")
+    end
+
+    it "populates the error with a result containing the hash of server responses" do
+      error_response_body = failure_result("Some meaningful remote error").to_json
+      FakeWeb.register_uri(:post, api_url, status: [400, ""], :body => error_response_body)
+      begin
+        client.send_email(required_params)
+      rescue MessagebusRubyApi::RemoteServerError => e
+        e.result[:statusMessage].should == "Some meaningful remote error"
+      end
     end
 
     it "raises an error if the remote server returns a status other than 200 OK" do
-      url_params = client.to_param(required_params)
-      FakeWeb.register_uri(:post, api_url_from_params(url_params), :status => [404, "Not Found"], :body => "")
+      FakeWeb.register_uri(:post, api_url, :status => [404, "Not Found"], :body => "")
       expect do
         client.send_email(required_params)
-      end.should raise_error(MessagebusRubyApi::RemoteServerError, "ERR:Remote Server Returned: 404")
+      end.should raise_error(MessagebusRubyApi::RemoteServerError, "Remote Server Returned: 404")
+    end
+
+    it "raises an error when the server does not return a json string" do
+      FakeWeb.register_uri(:post, api_url, :body => "i am not a json string")
+      expect do
+        client.send_email(required_params)
+      end.should raise_error(MessagebusRubyApi::RemoteServerError, "Remote server returned unrecognized response: 706: unexpected token at 'i am not a json string'")
     end
   end
 
   describe "#basic_auth_credentials=" do
     it "uses basic auth with the supplied credentials" do
       client.basic_auth_credentials = {:user => "user", :password => "pass"}
-      url_params = client.to_param(required_params)
-      FakeWeb.register_uri(:post, api_url_from_params(url_params), :body => "Unauthorized", :status => ["401", "Unauthorized"])
-      FakeWeb.register_uri(:post, "https://user:pass@api.messagebus.com/v1/send?operation=sendEmail&apiKey=#{api_key}&#{url_params}", :body => "OK:OK")
+      FakeWeb.register_uri(:post, api_url, :body => "Unauthorized", :status => ["401", "Unauthorized"])
+      FakeWeb.register_uri(:post, "https://user:pass@api.messagebus.com/api/v2/emails/send", :body => @success_result.to_json)
       expect do
         client.send_email(required_params)
       end.should_not raise_error
@@ -157,23 +179,26 @@ describe MessagebusRubyApi::Client do
 end
 
 def expect_api_success(params)
-  expected_url = api_url_from_params(client.to_param(client.check_params(params.dup)))
-  FakeWeb.register_uri(:post, expected_url, :body => "OK:OK")
+  FakeWeb.register_uri(:post, api_url, :body => @success_result.to_json)
   expect do
     response = client.send_email(params)
-    response.body.should == "OK:OK"
+    response[:statusMessage].should == "OK"
   end.should_not raise_error
 end
 
-def expect_api_errors(params, fake_response, expected_error_message="")
-  expected_params = client.to_param(params.dup)
-  FakeWeb.register_uri(:post, api_url_from_params(expected_params),
+def expect_api_parameter_errors(params, fake_response, expected_error_message="")
+  FakeWeb.register_uri(:post, api_url,
                        :body => fake_response)
   expect do
     client.send_email(params)
   end.should raise_error(MessagebusRubyApi::APIParameterError, "missing or malformed parameter #{expected_error_message}")
 end
 
-def api_url_from_params(url_param_string)
-  "https://api.messagebus.com/v1/send?operation=sendEmail&apiKey=#{api_key}&#{url_param_string}"
+def api_url
+  "https://api.messagebus.com/api/v2/emails/send"
 end
+
+def failure_result(message)
+  {"statusMessage" => message}
+end
+

@@ -43,9 +43,11 @@ Start by requiring MessagebusRubyApi:
     }
 
     response = client.send_email(@params)
-    puts "API call failed" unless response.body =~ /^OK:(.*)$/
+    puts "API sent #{response[:successCount]} message(s)"
 
 == Older Versions
+
+  If you are using the old api with the text OK:<UUID> responses, please be sure to get the 'v1' branch
 
   If you are using the old api with the 'body' parameter (instead of the new 'plaintextBody' and 'htmlBody' parameters), please be sure to get the 'v0' branch
 

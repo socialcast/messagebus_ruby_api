@@ -10,8 +10,10 @@ module MessagebusRubyApi
   end
 
   class RemoteServerError < StandardError
-    def initialize(message)
-      super
+    attr_reader :result
+    def initialize(message, result={})
+      super(message)
+      @result = result
     end
   end
   
