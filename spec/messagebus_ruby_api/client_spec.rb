@@ -176,6 +176,53 @@ describe MessagebusRubyApi::Client do
       end.should_not raise_error
     end
   end
+
+  describe "#bulk_send" do
+
+    before do
+      @common_options={:fromEmail => "bob@example.com"}
+    end
+
+    it "send an empty buffer" do
+      expect do
+        response = client.bulk_send([], @common_options)
+        response[:successCount].should == 0
+      end.should_not raise_error
+      #check no server calls were called
+    end
+
+    it "send a single item buffer" do
+      buffer=[required_params]
+      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => @success_result.to_json)
+      expect do
+        response = client.bulk_send(buffer, @common_options)
+        response[:successCount].should == 1
+      end.should_not raise_error
+    end
+
+    it "send a several item buffer" do
+      buffer=[required_params, required_params]
+      @success_result2 = {
+        "statusMessage" => "OK",
+        "successCount" => 2,
+        "failureCount" => 0,
+        "results" => [
+          {
+            "status" => 200,
+            "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
+          },
+          {
+            "status" => 200,
+            "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd2"
+          }
+        ]}
+      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => @success_result2.to_json)
+      expect do
+        response = client.bulk_send(buffer, @common_options)
+        response[:successCount].should == 2
+      end.should_not raise_error
+    end
+  end
 end
 
 def expect_api_success(params)
