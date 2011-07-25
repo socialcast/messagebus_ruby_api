@@ -112,7 +112,7 @@ module MessagebusRubyApi
     end
 
     def make_json_message(options)
-      message = {
+      {
         :toEmail => options[:toEmail],
         :subject => options[:subject],
         :plaintextBody => options[:plaintextBody],
