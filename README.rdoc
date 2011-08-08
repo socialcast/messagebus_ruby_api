@@ -31,8 +31,8 @@ Start by requiring MessagebusRubyApi:
 === Adding messages to the send buffer
   result=client.add_message({:toEmail=>"to@example.com"})
 
-  if you get a result >0 you get back the number of messages waiting to get sent
-  if you get a result = 0 that means the buffer was flushed and you can get results from client.return_status
+  If you get a result >0 you get back the number of messages waiting to get sent
+  If you get a result = 0 that means the buffer was flushed and you can get results from client.return_status
   Note: you should read from client.return_status before adding more messages since client.return_status will get cleared during the next auto-flush
 
 ==== When not using an API template
@@ -51,12 +51,32 @@ Start by requiring MessagebusRubyApi:
 === Flushing the send buffer
   client.flush
 
-  Note: Flushing returns the status of the messages that were sent. It also clears old values to client.return_status
+  Note: Flushing returns the status of the messages that were sent (see bellow). It also clears old values to client.return_status
 
   Warning: You always need to flush your buffer when you are done adding messages to be sent or if you want to send messages with a different common_info (failure to do so could result in unsent messages getting lost or old messages getting sent with your new common_info
 
-=== checking on message ids sent
+=== Checking on message ids sent
   client.return_status
+
+  Status messages will be in the following form:
+
+  {
+      "statusMessage" => "OK",
+      "successCount" => 1,
+      "failureCount" => 0,
+      "results" => [
+            {
+          "status" => 200,
+          "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
+            },
+            {
+          "status" => 200,
+          "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd2"
+            }
+      ]
+    }
+
+    If there are failures you will get 400 or 500 status codes as well as error messages
 
 == Older Versions
 
