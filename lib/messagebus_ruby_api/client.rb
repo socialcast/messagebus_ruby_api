@@ -10,9 +10,7 @@ module MessagebusRubyApi
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
       @endpoint_url = URI.parse(endpoint_url_string)
-      @endpoint_base_path="/api/v2/emails/"
-      @endpoint_path = @endpoint_base_path+"send"
-      @endpoint_bulk_path = @endpoint_base_path+"send_emails"
+      @endpoint_bulk_path = "/api/v2/emails/send"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
       @email_buffer_size=20
@@ -24,10 +22,10 @@ module MessagebusRubyApi
         :results => []
       }
       @return_status=@empty_results
+      @common_info={}
     end
 
     def add_message(email_options)
-      raise "a connection must be setup to send via a buffer" if @buffer==nil || @common_info==nil
       @buffer<<email_options
       if (@buffer.size >= @email_buffer_size)
         self.flush
@@ -42,41 +40,9 @@ module MessagebusRubyApi
         @return_status=@empty_results
         return
       end
-      @return_status=buffered_send(@buffer, @common_info)
+      @return_status=self.buffered_send(@buffer, @common_info)
       @buffer.clear
       @return_status
-    end
-
-    def send_email(options)
-      validate(options)
-      response = @http.start do |http|
-        request = create_api_request(@endpoint_path)
-        request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-        request.form_data={'json' => make_json_message_from_list([options], options)}
-        http.request(request)
-      end
-      case response
-        when Net::HTTPSuccess
-          begin
-            return JSON.parse(response.body, :symbolize_names => true)
-          rescue JSON::ParserError => e
-            raise MessagebusRubyApi::RemoteServerError.new("Remote server returned unrecognized response: #{e.message}")
-          end
-        when Net::HTTPClientError, Net::HTTPServerError
-          if (response.body && response.body.size > 0)
-            result = begin
-              JSON.parse(response.body, :symbolize_names => true)
-            rescue JSON::ParserError
-              nil
-            end
-            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}.  #{result[:statusMessage] if result}", result)
-          else
-            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}")
-          end
-        else
-          raise "Unexpected HTTP Response: #{response.class.name}"
-      end
-      raise "Could not determine response"
     end
 
     def basic_auth_credentials=(credentials)
@@ -122,6 +88,7 @@ module MessagebusRubyApi
       case response
         when Net::HTTPSuccess
           begin
+
             return JSON.parse(response.body, :symbolize_names => true)
           rescue JSON::ParserError => e
             raise MessagebusRubyApi::RemoteServerError.new("Remote server returned unrecognized response: #{e.message}")
@@ -144,21 +111,20 @@ module MessagebusRubyApi
     end
 
     def make_json_message(options)
-      {
-        :toEmail => options[:toEmail],
-        :toName => options[:toName],
-        :subject => options[:subject],
-        :plaintextBody => options[:plaintextBody],
-        :htmlBody => options[:htmlBody],
-        :fromName => options[:fromName],
-        :fromEmail => options[:fromEmail],
-        :tag => options[:tag],
-        :replyTo => options[:replyTo],
-        :errorsTo => options[:errorsTo],
-        :unsubscribeEmail => options[:unsubscribeEmail],
-        :unsubscribeURL => options[:unsubscribeURL],
-        :mergeFields => options[:mergeFields]
-      }
+      map={}
+      map["toEmail"]=options[:toEmail] if (options.has_key? :toEmail)
+      map["toName"]=options[:toName] if (options.has_key? :toName)
+      map["subject"]=options[:subject] if (options.has_key? :subject)
+      map["plaintextBody"]=options[:plaintextBody] if (options.has_key? :plaintextBody)
+      map["htmlBody"]=options[:htmlBody] if (options.has_key? :htmlBody)
+      map["fromName"]=options[:fromName] if (options.has_key? :fromName)
+      map["tag"]=options[:tag] if (options.has_key? :tag)
+      map["replyTo"]=options[:replyTo] if (options.has_key? :replyTo)
+      map["errorsTo"]=options[:errorsTo] if (options.has_key? :errorsTo)
+      map["unsubscribeEmail"]=options[:unsubscribeEmail] if (options.has_key? :unsubscribeEmail)
+      map["unsubscribeURL"]=options[:unsubscribeURL] if (options.has_key? :unsubscribeURL)
+      map["mergeFields"]=options[:mergeFields] if (options.has_key? :mergeFields)
+      map
     end
 
     def make_json_message_from_list(option_list, common_options)
@@ -167,16 +133,18 @@ module MessagebusRubyApi
         message_list<<make_json_message(list_item)
       end
       json = {
-        :apiKey => @api_key,
-        :messageCount => message_list.length,
-        :messages => message_list
+        "apiKey" => @api_key,
+        "messageCount" => message_list.length,
+        "messages" => message_list
       }
-      json[:fromEmail]=common_options[:fromEmail] if (common_options.has_key? :fromEmail)
-      json[:fromName]=common_options[:fromName] if (common_options.has_key? :fromName)
-      json[:replyTo]=common_options[:replyTo] if (common_options.has_key? :replyTo)
-      json[:tags]=common_options[:tags] if (common_options.has_key? :tags)
-      json[:templateKey]=common_options[:templateKey] if (common_options.has_key? :templateKey)
-
+      if (common_options!=nil)
+        json["fromEmail"]=common_options[:fromEmail] if (common_options.has_key? :fromEmail)
+        json["fromName"]=common_options[:fromName] if (common_options.has_key? :fromName)
+        json["replyTo"]=common_options[:replyTo] if (common_options.has_key? :replyTo)
+        json["tags"]=common_options[:tags] if (common_options.has_key? :tags)
+        json["templateKey"]=common_options[:templateKey] if (common_options.has_key? :templateKey)
+      end
+      
       json.reject { |k, v| v == nil }.to_json
     end
   end
