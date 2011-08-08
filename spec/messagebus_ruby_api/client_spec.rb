@@ -237,7 +237,6 @@ describe MessagebusRubyApi::Client do
         response = client.buffered_send([], @common_options)
         response[:successCount].should == 0
       end.should_not raise_error
-      #check no server calls were called
     end
 
     it "send a single item buffer" do
