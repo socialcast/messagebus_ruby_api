@@ -3,6 +3,7 @@ module MessagebusRubyApi
 
   class Client
     attr_reader :api_key, :endpoint_url, :http
+    attr_reader :buffer, :status_from_last_flush, :common_info, :buffer_size_before_autoflush
 
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
@@ -12,6 +13,39 @@ module MessagebusRubyApi
       @endpoint_bulk_path = @endpoint_base_path+"send_emails"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
+      @buffer_size_before_autoflush=100
+    end
+
+    def setup_connection(new_info)
+      raise "buffer needs to be flushed or destroyed before you can establish a new connection" unless @buffer==nil
+      @common_info=new_info
+      @buffer=[]
+    end
+
+    def buffered_send(email_options)
+      raise "a connection must be setup to send via a buffer" if @buffer==nil || @common_info==nil
+      @buffer<<email_options
+      if (@buffer.size >= @buffer_size_before_autoflush)
+        self.flush
+        return 0
+      else
+        return @buffer.size
+      end
+    end
+
+    def flush
+      if (@buffer.size==0)
+        return nil
+      end
+      @status_from_last_flush=bulk_send(@buffer, @common_info)
+      @buffer.clear
+    end
+
+    def teardown_connection
+      raise "a connection must be setup to teardown" if (@buffer==nil)
+      raise "you must flush or destroy a buffer to tear down" if (@buffer.size>0)
+      @buffer=nil
+      @common_options=nil
     end
 
     def send_email(options)
@@ -19,7 +53,7 @@ module MessagebusRubyApi
       response = @http.start do |http|
         request = create_api_request(@endpoint_path)
         request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-        request.form_data={'json' => make_json_message_from_list([options],options)}
+        request.form_data={'json' => make_json_message_from_list([options], options)}
         http.request(request)
       end
       case response
@@ -48,15 +82,15 @@ module MessagebusRubyApi
 
     def bulk_send(message_list, common_options)
       if (message_list.length==0)
-        return  {
-        :statusMessage => "OK",
-        :successCount => 0,
-        :failureCount => 0}
+        return {
+          :statusMessage => "OK",
+          :successCount => 0,
+          :failureCount => 0}
       end
       response = @http.start do |http|
         request = create_api_request(@endpoint_bulk_path)
         request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-        request.form_data={'json' => make_json_message_from_list(message_list,common_options)}
+        request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
         http.request(request)
       end
       case response
@@ -120,7 +154,7 @@ module MessagebusRubyApi
       }
     end
 
-    def make_json_message_from_list(option_list,common_options)
+    def make_json_message_from_list(option_list, common_options)
       message_list=[]
       option_list.each do |list_item|
         message_list<<make_json_message(list_item)
