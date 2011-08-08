@@ -3,8 +3,10 @@ module MessagebusRubyApi
 
   class Client
     attr_reader :api_key, :endpoint_url, :http
-    attr_reader :buffer, :status_from_last_flush, :common_info, :buffer_size_before_autoflush
-
+    attr_reader :buffer, :return_status, :email_buffer_size
+    attr_writer :common_info
+    @empty_results=nil
+    
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
       @endpoint_url = URI.parse(endpoint_url_string)
@@ -13,19 +15,21 @@ module MessagebusRubyApi
       @endpoint_bulk_path = @endpoint_base_path+"send_emails"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
-      @buffer_size_before_autoflush=100
-    end
-
-    def setup_connection(new_info)
-      raise "buffer needs to be flushed or destroyed before you can establish a new connection" unless @buffer==nil
-      @common_info=new_info
+      @email_buffer_size=20
       @buffer=[]
+      @empty_results= {
+        :statusMessage => "",
+        :successCount => 0,
+        :failureCount => 0,
+        :results => []
+      }
+      @return_status=@empty_results
     end
 
-    def buffered_send(email_options)
+    def add_message(email_options)
       raise "a connection must be setup to send via a buffer" if @buffer==nil || @common_info==nil
       @buffer<<email_options
-      if (@buffer.size >= @buffer_size_before_autoflush)
+      if (@buffer.size >= @email_buffer_size)
         self.flush
         return 0
       else
@@ -35,17 +39,12 @@ module MessagebusRubyApi
 
     def flush
       if (@buffer.size==0)
-        return nil
+        @return_status=@empty_results
+        return
       end
-      @status_from_last_flush=bulk_send(@buffer, @common_info)
+      @return_status=buffered_send(@buffer, @common_info)
       @buffer.clear
-    end
-
-    def teardown_connection
-      raise "a connection must be setup to teardown" if (@buffer==nil)
-      raise "you must flush or destroy a buffer to tear down" if (@buffer.size>0)
-      @buffer=nil
-      @common_options=nil
+      @return_status
     end
 
     def send_email(options)
@@ -80,7 +79,34 @@ module MessagebusRubyApi
       raise "Could not determine response"
     end
 
-    def bulk_send(message_list, common_options)
+    def basic_auth_credentials=(credentials)
+      @credentials = credentials
+    end
+
+
+    def create_api_request(path)
+      Net::HTTP::Post.new(path) #, {"User-Agent" => "messagebus.com Messagebus Ruby API v2"})
+    end
+
+    def check_priority(priority)
+      raise APIParameterError.new(":priority can only be an integer between 1 and 5, not \"#{priority}\"") unless priority.is_a?(Integer) && (1..5).include?(priority)
+      priority.to_s
+    end
+
+    def verified_reasonable_api_key(api_key)
+      raise BadAPIKeyError unless api_key.match(/^[a-zA-Z0-9]{32}$/)
+      api_key
+    end
+
+    def validate(params)
+      raise APIParameterError.new("toEmail") unless params[:toEmail]
+      raise APIParameterError.new("fromEmail") unless params[:fromEmail]
+      raise APIParameterError.new("subject") unless params[:subject]
+      raise APIParameterError.new("plaintextBody or htmlBody") unless params[:plaintextBody] || params[:htmlBody]
+      params[:priority] = check_priority(params[:priority]) unless params[:priority].nil?
+    end
+
+    def buffered_send(message_list, common_options)
       if (message_list.length==0)
         return {
           :statusMessage => "OK",
@@ -117,40 +143,21 @@ module MessagebusRubyApi
       raise "Could not determine response"
     end
 
-    def basic_auth_credentials=(credentials)
-      @credentials = credentials
-    end
-
-    private
-
-    def create_api_request(path)
-      Net::HTTP::Post.new(path) #, {"User-Agent" => "messagebus.com Messagebus Ruby API v2"})
-    end
-
-    def check_priority(priority)
-      raise APIParameterError.new(":priority can only be an integer between 1 and 5, not \"#{priority}\"") unless priority.is_a?(Integer) && (1..5).include?(priority)
-      priority.to_s
-    end
-
-    def verified_reasonable_api_key(api_key)
-      raise BadAPIKeyError unless api_key.match(/^[a-zA-Z0-9]{32}$/)
-      api_key
-    end
-
-    def validate(params)
-      raise APIParameterError.new("toEmail") unless params[:toEmail]
-      raise APIParameterError.new("fromEmail") unless params[:fromEmail]
-      raise APIParameterError.new("subject") unless params[:subject]
-      raise APIParameterError.new("plaintextBody or htmlBody") unless params[:plaintextBody] || params[:htmlBody]
-      params[:priority] = check_priority(params[:priority]) unless params[:priority].nil?
-    end
-
     def make_json_message(options)
       {
         :toEmail => options[:toEmail],
+        :toName => options[:toName],
         :subject => options[:subject],
         :plaintextBody => options[:plaintextBody],
-        :htmlBody => options[:htmlBody]
+        :htmlBody => options[:htmlBody],
+        :fromName => options[:fromName],
+        :fromEmail => options[:fromEmail],
+        :tag => options[:tag],
+        :replyTo => options[:replyTo],
+        :errorsTo => options[:errorsTo],
+        :unsubscribeEmail => options[:unsubscribeEmail],
+        :unsubscribeURL => options[:unsubscribeURL],
+        :mergeFields => options[:mergeFields]
       }
     end
 
@@ -165,8 +172,10 @@ module MessagebusRubyApi
         :messages => message_list
       }
       json[:fromEmail]=common_options[:fromEmail] if (common_options.has_key? :fromEmail)
+      json[:fromName]=common_options[:fromName] if (common_options.has_key? :fromName)
       json[:replyTo]=common_options[:replyTo] if (common_options.has_key? :replyTo)
       json[:tags]=common_options[:tags] if (common_options.has_key? :tags)
+      json[:templateKey]=common_options[:templateKey] if (common_options.has_key? :templateKey)
 
       json.reject { |k, v| v == nil }.to_json
     end

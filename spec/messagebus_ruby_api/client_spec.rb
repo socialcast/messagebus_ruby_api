@@ -25,8 +25,8 @@ describe MessagebusRubyApi::Client do
     @client = MessagebusRubyApi::Client.new(api_key)
     @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :plaintextBody => "a nice ocean", :subject => "test subject"}
     @success_message={
-          "status" => 200,
-          "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
+      "status" => 200,
+      "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
     }
     @simple_success_result = create_success_result(1)
   end
@@ -193,93 +193,48 @@ describe MessagebusRubyApi::Client do
       @common_options={:fromEmail => "bob@example.com"}
     end
 
-    describe "#setup_connection" do
-      it "setup a connection that wasnt taken down" do
-        client.setup_connection(@common_options)
-        expect do
-          client.setup_connection(@common_options)
-        end.should raise_error
-      end
-    end
-
-    describe "#buffered_send" do
+    describe "#add_message" do
       it "buffered send that adds to empty buffer" do
-        client.setup_connection(@common_options)
+        client.common_info=@common_options
         client.buffer.size.should == 0
-        client.buffered_send(required_params)
+        client.add_message(required_params)
         client.buffer.size.should == 1
       end
-      it "attempt to buffered send without a connection setup" do
-        expect do
-          client.buffered_send(required_params)
-        end.should raise_error
-      end
+      
       it "buffered send that adds to a buffer and auto-flushes" do
-                FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => create_success_result(100).to_json)
-        client.setup_connection(@common_options)
-        client.status_from_last_flush.should be_nil
-        #client.status_from_last_flush.results.size.should == 0
-        99.times do |idx|
-          client.buffered_send(required_params).should == idx+1
-          client.status_from_last_flush.should be_nil
+        FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => create_success_result(client.email_buffer_size).to_json)
+        client.common_info=@common_options
+        client.return_status[:results].size.should == 0
+        (client.email_buffer_size-1).times do |idx|
+          client.add_message(required_params).should == idx+1
+          client.return_status[:results].size.should == 0
         end
-        client.buffered_send(required_params).should == 0
-        client.status_from_last_flush[:results].size.should == 100
+        client.add_message(required_params).should == 0
+        client.return_status[:results].size.should == client.email_buffer_size
       end
     end
 
     describe "#flush" do
-      it "flush called on nonsetup connection" do
-        expect do
-          client.flush
-        end.should raise_error
-      end
       it "flush called on empty buffer" do
-        client.setup_connection(@common_options)
+        client.common_info=@common_options
+        client.return_status[:results].size.should == 0
         client.flush
-        client.status_from_last_flush.should
+        client.return_status[:results].size.should == 0
       end
       it "flush called on filled buffer" do
-        FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => create_success_result(20).to_json)
-        client.setup_connection(@common_options)
-        20.times do
-          client.buffered_send(required_params)
+        FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => create_success_result(10).to_json)
+        client.common_info=@common_options
+        10.times do
+          client.add_message(required_params)
         end
         client.flush
-        client.status_from_last_flush[:results].size.should == 20
-      end
-    end
-
-    describe "#teardown_connection" do
-      it "teardown called on nonsetup connection" do
-        expect do
-          client.teardown_connection
-        end.should raise_error
-      end
-      it "teardown called on nonempty buffer" do
-        client.setup_connection(@common_options)
-        client.buffered_send(required_params)
-        client.buffer.size.should == 1
-        expect do
-          client.teardown_connection
-        end.should raise_error
-      end
-      it "teardown called with empty buffer because it wasnt used" do
-        client.setup_connection(@common_options)
-        client.teardown_connection
-      end
-      it "teardown called with empty buffer because it was flushed" do
-        client.setup_connection(@common_options)
-        client.buffered_send(required_params)
-        client.buffer.size.should == 1
-        client.flush
-        client.teardown_connection
+        client.return_status[:results].size.should == 10
       end
     end
 
     it "send an empty buffer" do
       expect do
-        response = client.bulk_send([], @common_options)
+        response = client.buffered_send([], @common_options)
         response[:successCount].should == 0
       end.should_not raise_error
       #check no server calls were called
@@ -289,7 +244,7 @@ describe MessagebusRubyApi::Client do
       buffer=[required_params]
       FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => @simple_success_result.to_json)
       expect do
-        response = client.bulk_send(buffer, @common_options)
+        response = client.buffered_send(buffer, @common_options)
         response[:successCount].should == 1
       end.should_not raise_error
     end
@@ -312,7 +267,7 @@ describe MessagebusRubyApi::Client do
         ]}
       FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send_emails", :body => @success_result2.to_json)
       expect do
-        response = client.bulk_send(buffer, @common_options)
+        response = client.buffered_send(buffer, @common_options)
         response[:successCount].should == 2
       end.should_not raise_error
     end
