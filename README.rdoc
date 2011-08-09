@@ -62,7 +62,7 @@ Start by requiring MessagebusRubyApi:
 
   {
       "statusMessage" => "OK",
-      "successCount" => 1,
+      "successCount" => 2,
       "failureCount" => 0,
       "results" => [
             {
