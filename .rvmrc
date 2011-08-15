@@ -1,1 +1,1 @@
-rvm use ruby-1.9.2-p180@messagebus_ruby_api --create
+rvm use ruby-1.9.2-p180-patched@messagebus_ruby_api --create
