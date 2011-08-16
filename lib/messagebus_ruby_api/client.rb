@@ -120,9 +120,6 @@ module MessagebusRubyApi
       map["fromName"]=options[:fromName] if (options.has_key? :fromName)
       map["tag"]=options[:tag] if (options.has_key? :tag)
       map["replyTo"]=options[:replyTo] if (options.has_key? :replyTo)
-      map["errorsTo"]=options[:errorsTo] if (options.has_key? :errorsTo)
-      map["unsubscribeEmail"]=options[:unsubscribeEmail] if (options.has_key? :unsubscribeEmail)
-      map["unsubscribeURL"]=options[:unsubscribeURL] if (options.has_key? :unsubscribeURL)
       map["mergeFields"]=options[:mergeFields] if (options.has_key? :mergeFields)
       map
     end
@@ -142,6 +139,7 @@ module MessagebusRubyApi
         json["fromName"]=common_options[:fromName] if (common_options.has_key? :fromName)
         json["replyTo"]=common_options[:replyTo] if (common_options.has_key? :replyTo)
         json["tags"]=common_options[:tags] if (common_options.has_key? :tags)
+        json["customHeaders"]=common_options[:customHeaders] if (common_options.has_key? :customHeaders)
         json["templateKey"]=common_options[:templateKey] if (common_options.has_key? :templateKey)
       end
       

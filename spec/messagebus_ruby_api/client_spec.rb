@@ -34,7 +34,7 @@ describe MessagebusRubyApi::Client do
   describe "#bulk_send" do
 
     before do
-      @common_options={:fromEmail => "bob@example.com"}
+      @common_options={:fromEmail => "bob@example.com", :customHeaders => {"customfield1"=>"custom value 1","customfield2"=>"custom value 2"}}
     end
 
     describe "#add_message" do
