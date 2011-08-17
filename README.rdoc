@@ -17,22 +17,24 @@ Start by requiring MessagebusRubyApi:
 ==== When using an API template
 ====Required common_info field
   :templateKey
-====No Optional Fields
+====Optional Fields
+  None
 === Adding messages to the send buffer
   result=client.add_message({:toEmail=>"to@example.com"})
 If you get a result >0 you get back the number of messages waiting to get sent
 If you get a result = 0 that means the buffer was flushed and you can get results from client.return_status
 Note: you should read from client.return_status before adding more messages since client.return_status will get cleared during the next auto-flush
 ==== When not using an API template
-====Required message fields
+=====Required message fields
   :toEmail, :subject, :plaintextBody or :htmlBody
-====Optional message fields
+=====Optional message fields
   :tag, :toName,
 ==== When using an API template
-====Required common_info field
+=====Required common_info field
   :mergeFields={"%EMAIL"=>"to@example.com", "%KEY1%"="testing"}
   Note: the merge fields entries chould contain the keys used in the template, but only the %EMAIL% is required
-====No Optional Fields
+=====Optional Fields
+  None
 === Flushing the send buffer
   client.flush
 Note: Flushing returns the status of the messages that were sent (see bellow). It also clears old values to client.return_status
