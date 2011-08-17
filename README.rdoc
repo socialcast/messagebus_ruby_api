@@ -1,67 +1,45 @@
 = Messagebus Ruby API
-
 == Installation
-
   gem install messagebus_ruby_api
-
-
 == Examples
-
 Start by requiring MessagebusRubyApi:
-
   require 'messagebus_ruby_api'
-
 === Create the Api Client with your API key
-
   client = MessagebusRubyApi::Client.new("<INSERT_YOUR_API_KEY>")
-
 ===Sending Emails
-
 ==== Setting common fields for your emails
   client.common_info={:fromEmail="from@example.com"}
-
 ===== When not using an API template
-====== Required common_info field
+Required common_info field
   :fromEmail
-====== Optional common_info fields
+Optional common_info fields
   :fromName, :replyTo, :tags, :customHeaders
 ===== When using an API template
-====== Required common_info field
+Required common_info field
   :templateKey
-====== No Optional Fields
-
+No Optional Fields
 ==== Adding messages to the send buffer
   result=client.add_message({:toEmail=>"to@example.com"})
-
-  If you get a result >0 you get back the number of messages waiting to get sent
-  If you get a result = 0 that means the buffer was flushed and you can get results from client.return_status
-  Note: you should read from client.return_status before adding more messages since client.return_status will get cleared during the next auto-flush
-
+If you get a result >0 you get back the number of messages waiting to get sent
+If you get a result = 0 that means the buffer was flushed and you can get results from client.return_status
+Note: you should read from client.return_status before adding more messages since client.return_status will get cleared during the next auto-flush
 ===== When not using an API template
-====== Required message fields
+Required message fields
   :toEmail, :subject, :plaintextBody or :htmlBody
-====== Optional message fields
+Optional message fields
   :tag, :toName,
 ===== When using an API template
-====== Required common_info field
+Required common_info field
   :mergeFields={"%EMAIL"=>"to@example.com", "%KEY1%"="testing"}
-
-  Note: the merge fields entries chould contain the keys used in the template, but only the %EMAIL% is required
-
+Note: the merge fields entries chould contain the keys used in the template, but only the %EMAIL% is required
 ====== No Optional Fields
-
 ==== Flushing the send buffer
   client.flush
-
-  Note: Flushing returns the status of the messages that were sent (see bellow). It also clears old values to client.return_status
-
-  Warning: You always need to flush your buffer when you are done adding messages to be sent or if you want to send messages with a different common_info (failure to do so could result in unsent messages getting lost or old messages getting sent with your new common_info
-
+Note: Flushing returns the status of the messages that were sent (see bellow). It also clears old values to client.return_status
+Warning: You always need to flush your buffer when you are done adding messages to be sent or if you want to send messages with a different common_info (failure to do so could result in unsent messages getting lost or old messages getting sent with your new common_info
 ==== Checking on message ids sent
   client.return_status
-
 Status messages will be in the following form:
-
   {
       "statusMessage" => "OK",
       "successCount" => 2,
@@ -77,24 +55,16 @@ Status messages will be in the following form:
             }
       ]
     }
-
-    If there are failures you will get 400 or 500 status codes as well as error messages
-
+If there are failures you will get 400 or 500 status codes as well as error messages
 ===Viewing Error Reports
   client.error_report
-
 results will be in the following form:
   [
     {:date=>"2011-08-16T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"4.2.1"}
     {:date=>"2011-08-17T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"5.0.0"}
   ]
-
 == Older Versions
-
-  If you are using the old api with the text OK:<UUID> responses, please be sure to get the 'v1' branch
-
-  If you are using the old api with the 'body' parameter (instead of the new 'plaintextBody' and 'htmlBody' parameters), please be sure to get the 'v0' branch
-
+If you are using the old api with the text OK:<UUID> responses, please be sure to get the 'v1' branch
+If you are using the old api with the 'body' parameter (instead of the new 'plaintextBody' and 'htmlBody' parameters), please be sure to get the 'v0' branch
 == More info
-
 Contact MessageBus if you have questions or problems (https://www.messagebus.com/contact)
