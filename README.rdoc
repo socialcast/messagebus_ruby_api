@@ -10,14 +10,14 @@ Start by requiring MessagebusRubyApi:
 === Setting common fields for your emails
   client.common_info={:fromEmail="from@example.com"}
 ==== When not using an API template
-=====Required common_info field
+=====Required common_info fields
   :fromEmail
 =====Optional common_info fields
   :fromName, :replyTo, :tags, :customHeaders
 ==== When using an API template
-=====Required common_info field
+=====Required common_info fields
   :templateKey
-=====Optional Fields
+=====Optional common_info field
   None
 === Adding messages to the send buffer
   result=client.add_message({:toEmail=>"to@example.com"})
@@ -30,10 +30,10 @@ Note: you should read from client.return_status before adding more messages sinc
 =====Optional message fields
   :tag, :toName,
 ==== When using an API template
-=====Required common_info field
+=====Required message fields
   :mergeFields={"%EMAIL"=>"to@example.com", "%KEY1%"="testing"}
   Note: the merge fields entries chould contain the keys used in the template, but only the %EMAIL% is required
-=====Optional Fields
+=====Optional message fields
   None
 === Flushing the send buffer
   client.flush
