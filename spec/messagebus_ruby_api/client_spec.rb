@@ -34,45 +34,45 @@ describe MessagebusRubyApi::Client do
   describe "#bulk_send" do
 
     before do
-      @common_options={:fromEmail => "bob@example.com", :customHeaders => {"customfield1"=>"custom value 1","customfield2"=>"custom value 2"}}
+      @common_options={:fromEmail => "bob@example.com", :customHeaders => {"customfield1"=>"custom value 1", "customfield2"=>"custom value 2"}}
     end
 
     describe "#add_message" do
       it "buffered send that adds to empty buffer" do
-        client.common_info=@common_options
-        client.buffer.size.should == 0
+        client.send_common_info=@common_options
+        client.email_buffer.size.should == 0
         client.add_message(required_params)
-        client.buffer.size.should == 1
+        client.email_buffer.size.should == 1
       end
-      
+
       it "buffered send that adds to a buffer and auto-flushes" do
         FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => create_success_result(client.email_buffer_size).to_json)
-        client.common_info=@common_options
-        client.return_status[:results].size.should == 0
+        client.send_common_info=@common_options
+        client.send_return_status[:results].size.should == 0
         (client.email_buffer_size-1).times do |idx|
           client.add_message(required_params).should == idx+1
-          client.return_status[:results].size.should == 0
+          client.send_return_status[:results].size.should == 0
         end
         client.add_message(required_params).should == 0
-        client.return_status[:results].size.should == client.email_buffer_size
+        client.send_return_status[:results].size.should == client.email_buffer_size
       end
     end
 
     describe "#flush" do
       it "flush called on empty buffer" do
-        client.common_info=@common_options
-        client.return_status[:results].size.should == 0
+        client.send_common_info=@common_options
+        client.send_return_status[:results].size.should == 0
         client.flush
-        client.return_status[:results].size.should == 0
+        client.send_return_status[:results].size.should == 0
       end
       it "flush called on filled buffer" do
         FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => create_success_result(10).to_json)
-        client.common_info=@common_options
+        client.send_common_info=@common_options
         10.times do
           client.add_message(required_params)
         end
         client.flush
-        client.return_status[:results].size.should == 10
+        client.send_return_status[:results].size.should == 10
       end
     end
 
@@ -86,10 +86,10 @@ describe MessagebusRubyApi::Client do
     it "send a single item buffer" do
       buffer=[required_params]
       FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => @simple_success_result.to_json)
-      expect do
-        response = client.buffered_send(buffer, @common_options)
-        response[:successCount].should == 1
-      end.should_not raise_error
+      #expect do
+      response = client.buffered_send(buffer, @common_options)
+      response[:successCount].should == 1
+      #end.should_not raise_error
     end
 
     it "send a several item buffer" do
@@ -115,5 +115,22 @@ describe MessagebusRubyApi::Client do
       end.should_not raise_error
     end
   end
+
+  describe "#error_report" do
+
+    it "request error report" do
+      @success_result=[
+        {:date => (Time.now-(60*60*24)).utc.to_datetime.rfc3339, :address => "someguy@example.com", :errorCode => "4.2.1"},
+        {:date => Time.now.utc.to_datetime.rfc3339, :address => "someguy@example.com", :errorCode => "5.0.0"}
+      ]
+
+      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v2/emails/error_report", :body => @success_result.to_json)
+      expect do
+        response = client.error_report
+        response.should == @success_result
+      end.should_not raise_error
+    end
+  end
+
 end
 

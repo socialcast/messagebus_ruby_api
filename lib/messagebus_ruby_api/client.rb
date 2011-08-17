@@ -3,55 +3,65 @@ module MessagebusRubyApi
 
   class Client
     attr_reader :api_key, :endpoint_url, :http
-    attr_reader :buffer, :return_status, :email_buffer_size
-    attr_writer :common_info
-    @empty_results=nil
-    
+    attr_reader :email_buffer, :send_return_status, :email_buffer_size
+    attr_writer :send_common_info
+    @empty_send_results=nil
+
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
       @endpoint_url = URI.parse(endpoint_url_string)
-      @endpoint_bulk_path = "/api/v2/emails/send"
+      @endpoint_send_path = "/api/v2/emails/send"
+      @endpoint_error_report_path = "/api/v2/emails/error_report"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
+
       @email_buffer_size=20
-      @buffer=[]
-      @empty_results= {
+      @email_buffer=[]
+      @empty_send_results= {
         :statusMessage => "",
         :successCount => 0,
         :failureCount => 0,
         :results => []
       }
-      @return_status=@empty_results
-      @common_info={}
+      @send_return_status=@empty_send_results
+      @send_common_info={}
     end
 
     def add_message(email_options)
-      @buffer<<email_options
-      if (@buffer.size >= @email_buffer_size)
+      @email_buffer<<email_options
+      if (@email_buffer.size >= @email_buffer_size)
         self.flush
         return 0
       else
-        return @buffer.size
+        return @email_buffer.size
       end
     end
 
     def flush
-      if (@buffer.size==0)
-        @return_status=@empty_results
+      if (@email_buffer.size==0)
+        @send_return_status=@empty_send_results
         return
       end
-      @return_status=self.buffered_send(@buffer, @common_info)
-      @buffer.clear
-      @return_status
+      @send_return_status=self.buffered_send(@email_buffer, @send_common_info)
+      @email_buffer.clear
+      @send_return_status
+    end
+
+    def error_report
+      request=create_api_get_request(@endpoint_error_report_path)
+      self.make_api_call(request)
     end
 
     def basic_auth_credentials=(credentials)
       @credentials = credentials
     end
 
+    def create_api_post_request(path)
+      Net::HTTP::Post.new(path)
+    end
 
-    def create_api_request(path)
-      Net::HTTP::Post.new(path) #, {"User-Agent" => "messagebus.com Messagebus Ruby API v2"})
+    def create_api_get_request(path)
+      Net::HTTP::Get.new(path)
     end
 
     def check_priority(priority)
@@ -79,35 +89,8 @@ module MessagebusRubyApi
           :successCount => 0,
           :failureCount => 0}
       end
-      response = @http.start do |http|
-        request = create_api_request(@endpoint_bulk_path)
-        request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-        request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
-        http.request(request)
-      end
-      case response
-        when Net::HTTPSuccess
-          begin
-
-            return JSON.parse(response.body, :symbolize_names => true)
-          rescue JSON::ParserError => e
-            raise MessagebusRubyApi::RemoteServerError.new("Remote server returned unrecognized response: #{e.message}")
-          end
-        when Net::HTTPClientError, Net::HTTPServerError
-          if (response.body && response.body.size > 0)
-            result = begin
-              JSON.parse(response.body, :symbolize_names => true)
-            rescue JSON::ParserError
-              nil
-            end
-            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}.  #{result[:statusMessage] if result}", result)
-          else
-            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}")
-          end
-        else
-          raise "Unexpected HTTP Response: #{response.class.name}"
-      end
-      raise "Could not determine response"
+      request = create_api_post_request(@endpoint_send_path)
+      self.make_api_call(request)
     end
 
     def make_json_message(options)
@@ -142,8 +125,37 @@ module MessagebusRubyApi
         json["customHeaders"]=common_options[:customHeaders] if (common_options.has_key? :customHeaders)
         json["templateKey"]=common_options[:templateKey] if (common_options.has_key? :templateKey)
       end
-      
+
       json.reject { |k, v| v == nil }.to_json
+    end
+
+    def make_api_call(request)
+      response = @http.start do |http|
+        request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+        http.request(request)
+      end
+      case response
+        when Net::HTTPSuccess
+          begin
+            return JSON.parse(response.body, :symbolize_names => true)
+          rescue JSON::ParserError => e
+            raise MessagebusRubyApi::RemoteServerError.new("Remote server returned unrecognized response: #{e.message}")
+          end
+        when Net::HTTPClientError, Net::HTTPServerError
+          if (response.body && response.body.size > 0)
+            result = begin
+              JSON.parse(response.body, :symbolize_names => true)
+            rescue JSON::ParserError
+              nil
+            end
+            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}.  #{result[:statusMessage] if result}", result)
+          else
+            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}")
+          end
+        else
+          raise "Unexpected HTTP Response: #{response.class.name}"
+      end
+      raise "Could not determine response"
     end
   end
 end
