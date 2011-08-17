@@ -60,7 +60,7 @@ Start by requiring MessagebusRubyApi:
 ==== Checking on message ids sent
   client.return_status
 
-  Status messages will be in the following form:
+Status messages will be in the following form:
 
   {
       "statusMessage" => "OK",
@@ -81,7 +81,7 @@ Start by requiring MessagebusRubyApi:
     If there are failures you will get 400 or 500 status codes as well as error messages
 
 ===Viewing Error Reports
-client.error_report
+  client.error_report
 
 results will be in the following form:
   [
