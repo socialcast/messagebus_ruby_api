@@ -90,6 +90,8 @@ module MessagebusRubyApi
           :failureCount => 0}
       end
       request = create_api_post_request(@endpoint_send_path)
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
       self.make_api_call(request)
     end
 
