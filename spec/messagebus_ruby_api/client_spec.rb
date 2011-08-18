@@ -119,10 +119,14 @@ describe MessagebusRubyApi::Client do
   describe "#error_report" do
 
     it "request error report" do
-      @success_result=[
+      @success_result={
+        :reportSize=>2,
+        :results=>
+        [
         {:date => (Time.now-(60*60*24)).utc.to_datetime.rfc3339, :address => "someguy@example.com", :errorCode => "4.2.1"},
         {:date => Time.now.utc.to_datetime.rfc3339, :address => "someguy@example.com", :errorCode => "5.0.0"}
-      ]
+        ]
+      }
 
       FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v2/emails/error_report", :body => @success_result.to_json)
       expect do
