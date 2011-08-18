@@ -130,7 +130,7 @@ describe MessagebusRubyApi::Client do
         ]
       }
 
-      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v2/emails/error_report", :body => @success_result.to_json)
+      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v2/emails/error_report?apiKey=#{@api_key}", :body => @success_result.to_json)
       expect do
         response = client.error_report
         FakeWeb.last_request.body.should be_nil

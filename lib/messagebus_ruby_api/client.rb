@@ -48,7 +48,8 @@ module MessagebusRubyApi
     end
 
     def error_report
-      request=create_api_get_request(@endpoint_error_report_path)
+      request=create_api_get_request("#{@endpoint_error_report_path}?apiKey=#{@api_key}")
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       self.make_api_call(request)
     end
 
