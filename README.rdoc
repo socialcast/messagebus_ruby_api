@@ -13,7 +13,7 @@ Start by requiring MessagebusRubyApi:
 =====Required common_info fields
   :fromEmail
 =====Optional common_info fields
-  :fromName, :replyTo, :tags, :customHeaders
+  :fromName, :tags, :customHeaders
 ==== When using an API template
 =====Required common_info fields
   :templateKey

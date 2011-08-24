@@ -23,7 +23,7 @@ describe MessagebusRubyApi::Client do
 
     @api_key = "3"*32
     @client = MessagebusRubyApi::Client.new(api_key)
-    @required_params = {:toEmail => "bob@example.com", :fromEmail => "alice@example.com", :plaintextBody => "a nice ocean", :subject => "test subject"}
+    @required_params = {:toEmail => "bob@example.com", :plaintextBody => "a nice ocean", :subject => "test subject"}
     @success_message={
       "status" => 200,
       "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
