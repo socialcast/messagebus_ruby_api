@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    messagebus_ruby_api (0.4.1)
+    messagebus_ruby_api (0.4.3)
 
 GEM
   remote: http://rubygems.org/
