@@ -12,6 +12,7 @@ module MessagebusRubyApi
       @endpoint_url = URI.parse(endpoint_url_string)
       @endpoint_send_path = "/api/v2/emails/send"
       @endpoint_error_report_path = "/api/v2/emails/error_report"
+      @endpoint_blocked_emails_path = "/api/v2/blocked_emails"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
 
@@ -49,6 +50,16 @@ module MessagebusRubyApi
 
     def error_report
       request=create_api_get_request("#{@endpoint_error_report_path}?apiKey=#{@api_key}")
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      self.make_api_call(request)
+    end
+
+    def blocked_emails(start_date,end_date=nil)
+      additional_params="startDate=#{URI.escape(start_date.to_datetime.new_offset(0).rfc3339)}"
+      unless (end_date.nil?)
+        additional_params+="&endDate=#{URI.escape(end_date.to_datetime.new_offset(0).rfc3339)}"
+      end
+      request=create_api_get_request("#{@endpoint_blocked_emails_path}?apiKey=#{@api_key}&#{additional_params}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       self.make_api_call(request)
     end
@@ -130,7 +141,7 @@ module MessagebusRubyApi
       json.reject { |k, v| v == nil }.to_json
     end
 
-    def make_api_call(request)
+    def make_api_call(request, symbolize_names=true)
       response = @http.start do |http|
         request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
         http.request(request)
@@ -138,14 +149,14 @@ module MessagebusRubyApi
       case response
         when Net::HTTPSuccess
           begin
-            return JSON.parse(response.body, :symbolize_names => true)
+            return JSON.parse(response.body, :symbolize_names => symbolize_names)
           rescue JSON::ParserError => e
             raise MessagebusRubyApi::RemoteServerError.new("Remote server returned unrecognized response: #{e.message}")
           end
         when Net::HTTPClientError, Net::HTTPServerError
           if (response.body && response.body.size > 0)
             result = begin
-              JSON.parse(response.body, :symbolize_names => true)
+              JSON.parse(response.body, :symbolize_names => symbolize_names)
             rescue JSON::ParserError
               nil
             end

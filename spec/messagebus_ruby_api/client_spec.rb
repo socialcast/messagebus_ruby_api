@@ -139,5 +139,28 @@ describe MessagebusRubyApi::Client do
     end
   end
 
+   describe "#blocked_emails" do
+
+    it "request blocked emails list" do
+
+      start_date_str="2011-01-01T04:30:00+00:00"
+      end_date_str="2011-01-02T04:30:00+00:00"
+      start_date=DateTime.parse(start_date_str)
+      end_date=DateTime.parse(end_date_str)
+      @success_result=[
+        {:email=>"test1@example.com", :message_send_time=>"2011-01-01T03:02:00", :created_at=>"2011-01-02T04:32:00", :message_id=>"testmessageid1"},
+        {:email=>"test2@example.com",:message_send_time=>"2011-01-01T02:02:00", :created_at=>"2011-01-02T02:32:00", :message_id=>"testmessageid2"}
+      ]
+      expected_rquest="https://api.messagebus.com/api/v2/blocked_emails?apiKey=#{@api_key}&startDate=#{URI.escape(start_date_str)}&endDate=#{URI.escape(end_date_str)}"
+
+      FakeWeb.register_uri(:get, expected_rquest, :body => @success_result.to_json)
+      expect do
+        response = client.blocked_emails(start_date,end_date)
+        FakeWeb.last_request.body.should be_nil
+        response.should == @success_result
+      end.should_not raise_error
+    end
+  end
+
 end
 
