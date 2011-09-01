@@ -62,8 +62,15 @@ If there are failures you will get 400 or 500 status codes as well as error mess
   client.error_report
 results will be in the following form:
   [
-    {:date=>"2011-08-16T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"4.2.1"}
+    {:date=>"2011-08-16T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"4.2.1"},
     {:date=>"2011-08-17T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"5.0.0"}
+  ]
+==Viewing Unsubscribes By Date
+  client.blocked_emails
+results will be in the following form:
+  [
+    {:email:"test558_7283@example.com",:unsubscribe_time:"2011-08-31T19:24:00+00:00","message_send_time":"2011-08-31T17:29:16+00:00","message_id":"testid"},
+    {:email:"test558_7283@example.com",:unsubscribe_time:"2011-08-31T19:24:00+00:00","message_send_time":"2011-08-31T17:29:16+00:00","message_id":"testid"}
   ]
 = Older Versions
 If you are using the old api with the text OK:<UUID> responses, please be sure to get the 'v1' branch
