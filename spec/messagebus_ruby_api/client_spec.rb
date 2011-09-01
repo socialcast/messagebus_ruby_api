@@ -148,8 +148,8 @@ describe MessagebusRubyApi::Client do
       start_date=DateTime.parse(start_date_str)
       end_date=DateTime.parse(end_date_str)
       @success_result=[
-        {:email=>"test1@example.com", :message_send_time=>"2011-01-01T03:02:00", :created_at=>"2011-01-02T04:32:00", :message_id=>"testmessageid1"},
-        {:email=>"test2@example.com",:message_send_time=>"2011-01-01T02:02:00", :created_at=>"2011-01-02T02:32:00", :message_id=>"testmessageid2"}
+        {:email=>"test1@example.com", :message_send_time=>"2011-01-01T03:02:00", :unsubscribe_time=>"2011-01-02T04:32:00", :message_id=>"testmessageid1"},
+        {:email=>"test2@example.com",:message_send_time=>"2011-01-01T02:02:00", :unsubscribe_time=>"2011-01-02T02:32:00", :message_id=>"testmessageid2"}
       ]
       expected_rquest="https://api.messagebus.com/api/v2/blocked_emails?apiKey=#{@api_key}&startDate=#{URI.escape(start_date_str)}&endDate=#{URI.escape(end_date_str)}"
 
