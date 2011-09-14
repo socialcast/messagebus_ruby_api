@@ -10,11 +10,7 @@ module MessagebusRubyApi
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
       @endpoint_url = URI.parse(endpoint_url_string)
-      @endpoint_send_path = "/api/v2/emails/send"
-      @endpoint_error_report_path = "/api/v2/emails/error_report"
-      @endpoint_blocked_emails_path = "/api/v2/blocked_emails"
-      @endpoint_mailing_list_add_entry = "/api/v2/mailing_list_entry/add_entry"
-      @endpoint_mailing_list_delete_entry = "/api/v2/mailing_list_entry"
+      @end_point_v2_base_path="/api/v2/"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
 
@@ -51,7 +47,7 @@ module MessagebusRubyApi
     end
 
     def add_to_mailing_list(mailing_list_key, merge_fields)
-      request = create_api_post_request(@endpoint_mailing_list_add_entry)
+      request = create_api_post_request("#{@end_point_v2_base_path}mailing_list_entry/add_entry")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       json = {
         "apiKey" => @api_key,
@@ -63,7 +59,7 @@ module MessagebusRubyApi
     end
 
     def remove_from_mailing_list(mailing_list_key, to_email)
-      request = create_api_delete_request(@endpoint_mailing_list_delete_entry)
+      request = create_api_delete_request("#{@end_point_v2_base_path}mailing_list_entry")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       json = {
         "apiKey" => @api_key,
@@ -75,7 +71,7 @@ module MessagebusRubyApi
     end
 
     def error_report
-      request=create_api_get_request("#{@endpoint_error_report_path}?apiKey=#{@api_key}")
+      request=create_api_get_request("#{@end_point_v2_base_path}emails/error_report?apiKey=#{@api_key}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       make_api_call(request)
     end
@@ -85,7 +81,7 @@ module MessagebusRubyApi
       unless (end_date.nil?)
         additional_params+="&endDate=#{URI.escape(end_date.to_datetime.new_offset(0).rfc3339)}"
       end
-      request=create_api_get_request("#{@endpoint_blocked_emails_path}?apiKey=#{@api_key}&#{additional_params}")
+      request=create_api_get_request("#{@end_point_v2_base_path}blocked_emails?apiKey=#{@api_key}&#{additional_params}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       make_api_call(request)
     end
@@ -101,7 +97,7 @@ module MessagebusRubyApi
           :successCount => 0,
           :failureCount => 0}
       end
-      request = create_api_post_request(@endpoint_send_path)
+      request = create_api_post_request("#{@end_point_v2_base_path}emails/send")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
       make_api_call(request)
