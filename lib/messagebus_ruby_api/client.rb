@@ -33,7 +33,7 @@ module MessagebusRubyApi
     def add_message(email_options)
       @email_buffer<<email_options
       if (@email_buffer.size >= @email_buffer_size)
-        self.flush
+        flush
         return 0
       else
         return @email_buffer.size
@@ -77,7 +77,7 @@ module MessagebusRubyApi
     def error_report
       request=create_api_get_request("#{@endpoint_error_report_path}?apiKey=#{@api_key}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-      self.make_api_call(request)
+      make_api_call(request)
     end
 
     def blocked_emails(start_date, end_date=nil)
@@ -87,7 +87,7 @@ module MessagebusRubyApi
       end
       request=create_api_get_request("#{@endpoint_blocked_emails_path}?apiKey=#{@api_key}&#{additional_params}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-      self.make_api_call(request)
+      make_api_call(request)
     end
 
     def basic_auth_credentials=(credentials)
