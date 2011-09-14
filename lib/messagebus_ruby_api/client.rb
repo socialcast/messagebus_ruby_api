@@ -94,6 +94,19 @@ module MessagebusRubyApi
       @credentials = credentials
     end
 
+    def buffered_send(message_list, common_options)
+      if (message_list.length==0)
+        return {
+          :statusMessage => "OK",
+          :successCount => 0,
+          :failureCount => 0}
+      end
+      request = create_api_post_request(@endpoint_send_path)
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
+      make_api_call(request)
+    end
+
     private
 
     def create_api_post_request(path)
@@ -124,19 +137,6 @@ module MessagebusRubyApi
       raise APIParameterError.new("subject") unless params[:subject]
       raise APIParameterError.new("plaintextBody or htmlBody") unless params[:plaintextBody] || params[:htmlBody]
       params[:priority] = check_priority(params[:priority]) unless params[:priority].nil?
-    end
-
-    def buffered_send(message_list, common_options)
-      if (message_list.length==0)
-        return {
-          :statusMessage => "OK",
-          :successCount => 0,
-          :failureCount => 0}
-      end
-      request = create_api_post_request(@endpoint_send_path)
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-      request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
-      make_api_call(request)
     end
 
     def make_json_message(options)
