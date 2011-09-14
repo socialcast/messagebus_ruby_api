@@ -168,7 +168,7 @@ describe MessagebusRubyApi::Client do
       mailing_list_key="test_key"
       to_email="test@example.com"
 
-      expected_request="https://api.messagebus.com/api/v2/mailing_list_entry/destroy"
+      expected_request="https://api.messagebus.com/api/v2/mailing_list_entry"
 
       FakeWeb.register_uri(:delete, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
