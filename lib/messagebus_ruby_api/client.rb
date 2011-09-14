@@ -13,6 +13,8 @@ module MessagebusRubyApi
       @endpoint_send_path = "/api/v2/emails/send"
       @endpoint_error_report_path = "/api/v2/emails/error_report"
       @endpoint_blocked_emails_path = "/api/v2/blocked_emails"
+      @endpoint_mailing_list_add_entry = "/api/v2/mailing_list_entry/add_entry"
+      @endpoint_mailing_list_delete_entry = "/api/v2/mailing_list_entry"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
 
@@ -43,9 +45,33 @@ module MessagebusRubyApi
         @send_return_status=@empty_send_results
         return
       end
-      @send_return_status=self.buffered_send(@email_buffer, @send_common_info)
+      @send_return_status=buffered_send(@email_buffer, @send_common_info)
       @email_buffer.clear
       @send_return_status
+    end
+
+    def add_to_mailing_list(mailing_list_key, merge_fields)
+      request = create_api_post_request(@endpoint_mailing_list_add_entry)
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      json = {
+        "apiKey" => @api_key,
+        "mailingListKey" => mailing_list_key,
+        "mergeFields" => merge_fields
+      }.to_json
+      request.form_data={'json' => json}
+      make_api_call(request)
+    end
+
+    def remove_from_mailing_list(mailing_list_key, to_email)
+      request = create_api_delete_request(@endpoint_mailing_list_delete_entry)
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      json = {
+        "apiKey" => @api_key,
+        "mailingListKey" => mailing_list_key,
+        "email" => to_email
+      }.to_json
+      request.form_data={'json' => json}
+      make_api_call(request)
     end
 
     def error_report
@@ -54,7 +80,7 @@ module MessagebusRubyApi
       self.make_api_call(request)
     end
 
-    def blocked_emails(start_date,end_date=nil)
+    def blocked_emails(start_date, end_date=nil)
       additional_params="startDate=#{URI.escape(start_date.to_datetime.new_offset(0).rfc3339)}"
       unless (end_date.nil?)
         additional_params+="&endDate=#{URI.escape(end_date.to_datetime.new_offset(0).rfc3339)}"
@@ -68,12 +94,18 @@ module MessagebusRubyApi
       @credentials = credentials
     end
 
+    private
+
     def create_api_post_request(path)
       Net::HTTP::Post.new(path)
     end
 
     def create_api_get_request(path)
       Net::HTTP::Get.new(path)
+    end
+
+    def create_api_delete_request(path)
+      Net::HTTP::Delete.new(path)
     end
 
     def check_priority(priority)
@@ -104,7 +136,7 @@ module MessagebusRubyApi
       request = create_api_post_request(@endpoint_send_path)
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
-      self.make_api_call(request)
+      make_api_call(request)
     end
 
     def make_json_message(options)

@@ -17,5 +17,9 @@ client.flush
 # print return_status
 puts client.send_return_status
 
-
-
+mailing_list_key="YOUR_MAILING_LIST_KEY_GOES_HERE"
+merge_fields={"%EMAIL%"=>"a@example.com"}
+response=client.add_to_mailing_list(mailing_list_key, merge_fields)
+puts response
+response=client.remove_from_mailing_list(mailing_list_key, "a@example.com")
+puts response

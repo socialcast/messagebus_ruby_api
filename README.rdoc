@@ -58,6 +58,15 @@ Status messages will be in the following form:
       ]
     }
 If there are failures you will get 400 or 500 status codes as well as error messages
+==Mailing List Management
+Calls take a mailing list key which can be found on the mailing list management page on messagebus.com
+Responses are of the form
+  {:statusMessage => "OK"}
+===Adding to a mailing list
+  merge_fields={"%EMAIL%"=>"a@example.com","%PARAM1%"=>"value 1"}
+  client.add_to_mailing_list(mailing_list_key, merge_fields)
+===Removing from a mailing list
+  client.remove_from_mailing_list(mailing_list_key, "a@example.com")
 ==Viewing Error Reports
   client.error_report
 results will be in the following form:
