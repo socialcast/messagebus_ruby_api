@@ -77,9 +77,11 @@ module MessagebusRubyApi
     end
 
     def blocked_emails(start_date, end_date=nil)
-      additional_params="startDate=#{URI.escape(start_date.to_datetime.new_offset(0).rfc3339)}"
+      start_dt = DateTime.parse(start_date)
+      end_dt = DateTime.parse(end_date)
+      additional_params="startDate=#{URI.escape("#{start_dt}")}"
       unless (end_date.nil?)
-        additional_params+="&endDate=#{URI.escape(end_date.to_datetime.new_offset(0).rfc3339)}"
+        additional_params+="&endDate=#{URI.escape("#{end_dt}")}"
       end
       request=create_api_get_request("#{@end_point_v2_base_path}blocked_emails?apiKey=#{@api_key}&#{additional_params}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials

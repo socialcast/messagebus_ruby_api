@@ -145,8 +145,7 @@ describe MessagebusRubyApi::Client do
 
       start_date_str="2011-01-01T04:30:00+00:00"
       end_date_str="2011-01-02T04:30:00+00:00"
-      start_date=DateTime.parse(start_date_str)
-      end_date=DateTime.parse(end_date_str)
+
       @success_result=[
         {:email=>"test1@example.com", :message_send_time=>"2011-01-01T03:02:00", :unsubscribe_time=>"2011-01-02T04:32:00", :message_id=>"testmessageid1"},
         {:email=>"test2@example.com", :message_send_time=>"2011-01-01T02:02:00", :unsubscribe_time=>"2011-01-02T02:32:00", :message_id=>"testmessageid2"}
@@ -155,7 +154,7 @@ describe MessagebusRubyApi::Client do
 
       FakeWeb.register_uri(:get, expected_request, :body => @success_result.to_json)
       expect do
-        response = client.blocked_emails(start_date, end_date)
+        response = client.blocked_emails(start_date_str, end_date_str)
         FakeWeb.last_request.body.should be_nil
         response.should == @success_result
       end.should_not raise_error
