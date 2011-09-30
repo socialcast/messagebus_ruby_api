@@ -121,12 +121,15 @@ describe MessagebusRubyApi::Client do
   describe "#error_report" do
 
     it "request error report" do
+
+      start_date_str="2011-01-01T04:30:00+00:00"
+      end_date_str="2011-01-02T04:30:00+00:00"
+
       @success_result={
         :reportSize=>2,
-        :results=>
-        [
-        {:date => (Time.now-(60*60*24)).utc.to_datetime.rfc3339, :address => "someguy@example.com", :errorCode => "4.2.1"},
-        {:date => Time.now.utc.to_datetime.rfc3339, :address => "someguy@example.com", :errorCode => "5.0.0"}
+        :results=>[
+          {:date => start_date_str, :address => "someguy@example.com", :errorCode => "4.2.1"},
+          {:date => end_date_str, :address => "someguy@example.com", :errorCode => "5.0.0"}
         ]
       }
 
