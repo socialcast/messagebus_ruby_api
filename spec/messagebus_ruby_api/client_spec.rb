@@ -18,6 +18,14 @@ describe MessagebusRubyApi::Client do
     success_result
   end
 
+  def create_results_array
+    results = {
+        "statusMessage" => "OK",
+        "results" => []
+    }
+    results
+  end
+
   before do
     FakeWeb.allow_net_connect = false
 
@@ -118,8 +126,7 @@ describe MessagebusRubyApi::Client do
     end
   end
 
-  describe "#error_report" do
-
+  describe "#get_error_report" do
     it "request error report" do
 
       start_date_str="2011-01-01T04:30:00+00:00"
@@ -135,15 +142,14 @@ describe MessagebusRubyApi::Client do
 
       FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v2/emails/error_report?apiKey=#{@api_key}", :body => @success_result.to_json)
       expect do
-        response = client.error_report
+        response = client.get_error_report
         FakeWeb.last_request.body.should be_nil
         response.should == @success_result
       end.should_not raise_error
     end
   end
 
-  describe "#blocked_emails" do
-
+  describe "#get_unsubscribe_results" do
     it "request blocked emails list" do
 
       start_date_str="2011-01-01T04:30:00+00:00"
@@ -157,15 +163,14 @@ describe MessagebusRubyApi::Client do
 
       FakeWeb.register_uri(:get, expected_request, :body => @success_result.to_json)
       expect do
-        response = client.blocked_emails(start_date_str, end_date_str)
+        response = client.get_unsubscribe_results(start_date_str, end_date_str)
         FakeWeb.last_request.body.should be_nil
         response.should == @success_result
       end.should_not raise_error
     end
   end
 
-  describe "#remove_from_mailing_list" do
-
+  describe "#remove_mailing_list_entry" do
     it "remove from mailing list" do
       mailing_list_key="test_key"
       to_email="test@example.com"
@@ -174,7 +179,7 @@ describe MessagebusRubyApi::Client do
 
       FakeWeb.register_uri(:delete, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
-        response = client.remove_from_mailing_list(mailing_list_key, to_email)
+        response = client.remove_mailing_list_entry(mailing_list_key, to_email)
         FakeWeb.last_request.body.should =~ /json=/
         response.should == {:statusMessage => "OK"}
         FakeWeb.last_request.body
@@ -183,8 +188,7 @@ describe MessagebusRubyApi::Client do
     end
   end
 
-  describe "#add_to_mailing_list" do
-
+  describe "#add_mailing_list_entry" do
     it "add to mailing list" do
       mailing_list_key="test_key"
       merge_fields={"%EMAIL%"=>"a@example.com", "%PARAM1%"=>"test value"}
@@ -192,11 +196,23 @@ describe MessagebusRubyApi::Client do
 
       FakeWeb.register_uri(:post, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
-        response = client.add_to_mailing_list(mailing_list_key, merge_fields)
+        response = client.add_mailing_list_entry(mailing_list_key, merge_fields)
         FakeWeb.last_request.body.should =~ /json=/
         response.should == {:statusMessage => "OK"}
       end.should_not raise_error
 
+    end
+  end
+
+  describe "#get_mailing_lists" do
+    it "get mailing lists" do
+      expected_request="https://api.messagebus.com/api/v2/mailingLists?apiKey=#{@api_key}"
+
+      FakeWeb.register_uri(:get, expected_request, :body => create_results_array.to_json)
+      expect do
+        response = client.get_mailing_lists
+        response.should == {:statusMessage => "OK", :results => []}
+      end.should_not raise_error
     end
   end
 

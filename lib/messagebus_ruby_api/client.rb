@@ -3,7 +3,7 @@ module MessagebusRubyApi
 
   class Client
     attr_reader :api_key, :endpoint_url, :http
-    attr_reader :email_buffer, :send_return_status, :email_buffer_size
+    attr_reader :email_buffer, :send_return_status, :email_buffer_size, :user_agent
     attr_writer :send_common_info
     @empty_send_results=nil
 
@@ -13,6 +13,7 @@ module MessagebusRubyApi
       @end_point_v2_base_path="/api/v2/"
       @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
       @http.use_ssl = true
+      @user_agent = "MessagebusAPI:#{MessagebusRubyApi::VERSION}-Ruby:#{RUBY_VERSION}"
 
       @email_buffer_size=20
       @email_buffer=[]
@@ -46,7 +47,7 @@ module MessagebusRubyApi
       @send_return_status
     end
 
-    def add_to_mailing_list(mailing_list_key, merge_fields)
+    def add_mailing_list_entry(mailing_list_key, merge_fields)
       request = create_api_post_request("#{@end_point_v2_base_path}mailing_list_entry/add_entry")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       json = {
@@ -58,7 +59,7 @@ module MessagebusRubyApi
       make_api_call(request)
     end
 
-    def remove_from_mailing_list(mailing_list_key, to_email)
+    def remove_mailing_list_entry(mailing_list_key, to_email)
       request = create_api_delete_request("#{@end_point_v2_base_path}mailing_list_entry")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       json = {
@@ -70,13 +71,19 @@ module MessagebusRubyApi
       make_api_call(request)
     end
 
-    def error_report
+    def get_mailing_lists
+      request=create_api_get_request("#{@end_point_v2_base_path}mailingLists?apiKey=#{@api_key}")
+      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      make_api_call(request)
+    end
+
+    def get_error_report
       request=create_api_get_request("#{@end_point_v2_base_path}emails/error_report?apiKey=#{@api_key}")
       request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
       make_api_call(request)
     end
 
-    def blocked_emails(start_date, end_date=nil)
+    def get_unsubscribe_results(start_date, end_date=nil)
       start_dt = DateTime.parse(start_date)
       end_dt = DateTime.parse(end_date)
       additional_params="startDate=#{URI.escape("#{start_dt}")}"
@@ -108,15 +115,15 @@ module MessagebusRubyApi
     private
 
     def create_api_post_request(path)
-      Net::HTTP::Post.new(path)
+      Net::HTTP::Post.new(path, {'User-Agent' => user_agent})
     end
 
     def create_api_get_request(path)
-      Net::HTTP::Get.new(path)
+      Net::HTTP::Get.new(path, {'User-Agent' => user_agent})
     end
 
     def create_api_delete_request(path)
-      Net::HTTP::Delete.new(path)
+      Net::HTTP::Delete.new(path, {'User-Agent' => user_agent})
     end
 
     def check_priority(priority)
