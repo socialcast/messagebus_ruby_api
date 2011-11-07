@@ -6,3 +6,4 @@ require 'cgi'
 
 require "#{dir}/messagebus_ruby_api/errors"
 require "#{dir}/messagebus_ruby_api/client"
+require "#{dir}/messagebus_ruby_api/version"
