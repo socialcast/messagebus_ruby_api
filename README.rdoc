@@ -8,16 +8,17 @@ Start by requiring MessagebusRubyApi:
   client = MessagebusRubyApi::Client.new("<INSERT_YOUR_API_KEY>")
 ==Sending Emails
 === Setting common fields for your emails
-  client.common_info={:fromEmail=>"from@example.com"}
+  client.send_common_info={:fromEmail=>"from@example.com"}
 ==== When not using an API template
-=====Required common_info fields
+=====Required send_common_info fields
   :fromEmail
-=====Optional common_info fields
-  :fromName, :tags, :customHeaders
+=====Optional send_common_info fields
+  :fromName, :tags,
+   :customHeaders
 ==== When using an API template
-=====Required common_info fields
+=====Required send_common_info fields
   :templateKey
-=====Optional common_info field
+=====Optional send_common_info field
   None
 === Adding messages to the send buffer
   result=client.add_message({:toEmail=>"to@example.com"})
