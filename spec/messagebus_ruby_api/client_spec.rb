@@ -1,8 +1,30 @@
 dir = File.dirname(__FILE__)
 require "#{dir}/../spec_helper"
 
-describe MessagebusRubyApi::Client do
+describe MessagebusApi::Messagebus do
   attr_reader :client, :api_key, :required_params
+
+  def default_message_params
+    { :toEmail => 'apitest1@messagebus.com',
+      :toName => 'EmailUser',
+      :fromEmail => 'api@messagebus.com',
+      :fromName => 'API',
+      :subject => 'Unit Test Message',
+      :customHeaders => ["sender"=>"apitest1@messagebus.com"],
+      :plaintextBody => 'This message is only a test sent by the Ruby MessageBus client library.',
+      :htmlBody => "<html><body>This message is only a test sent by the Ruby MessageBus client library.</body></html>",
+      :tags => ['RUBY', 'Unit Test Ruby']
+    }
+  end
+
+  def default_template_message_params
+    { "toEmail" => 'apitest1@messagebus.com',
+      "toName" => 'John Smith',
+      "templateKey" => '66f6181bcb4cff4cd38fbc804a036db6',
+      "customHeaders" => ["reply-to"=>"apitest1@messagebus.com"],
+      "mergeFields" => ["%NAME%" => "John"]
+    }
+  end
 
   def create_success_result(num_result)
     list=[]
@@ -11,7 +33,7 @@ describe MessagebusRubyApi::Client do
     end
     success_result = {
       "statusMessage" => "OK",
-      "successCount" => 1,
+      "successCount" => num_result,
       "failureCount" => 0,
       "results" => list
     }
@@ -29,101 +51,121 @@ describe MessagebusRubyApi::Client do
   before do
     FakeWeb.allow_net_connect = false
 
-    @api_key = "3"*32
-    @client = MessagebusRubyApi::Client.new(api_key)
-    @required_params = {:toEmail => "bob@example.com", :plaintextBody => "a nice ocean", :subject => "test subject"}
+    @api_key = "7215ee9c7d9dc229d2921a40e899ec5f"
+    @client = MessagebusApi::Messagebus.new(@api_key)
     @success_message={
       "status" => 200,
-      "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
+      "messageId" => "abcdefghijklmnopqrstuvwxyz012345"
     }
     @simple_success_result = create_success_result(1)
+  end
+
+  describe "messagebus object set up correctly" do
+    it "has correct headers set for api calls" do
+      client = MessagebusApi::Messagebus.new(@api_key)
+
+    end
+  end
+
+  describe "#add_message" do
+    it "buffered send that adds to empty buffer" do
+      client.add_message(default_message_params)
+      client.flushed?.should be_false
+    end
+
+    it "buffered send that adds to empty buffer and sends with flush_buffer flag" do
+      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v3/emails/send", :body => create_success_result(client.message_buffer_size).to_json)
+      client.add_message(default_message_params, true)
+      client.flushed?.should be_true
+    end
+
+    it "buffered send that adds to a buffer and auto-flushes" do
+      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v3/emails/send", :body => create_success_result(client.message_buffer_size).to_json)
+      client.send_common_info=@common_options
+      (client.message_buffer_size-1).times do |idx|
+        client.add_message(default_message_params)
+        client.flushed?.should be_false
+      end
+      client.add_message(default_message_params)
+      client.flushed?.should be_true
+      client.results[:results].size.should == client.message_buffer_size
+    end
+  end
+
+  describe "#flush" do
+    it "flush called on empty buffer" do
+      client.flush
+      client.flushed?.should be_false
+    end
+
+    it "flush called on partially filled buffer" do
+      message_count = 9
+      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v3/emails/send", :body => create_success_result(message_count).to_json)
+      (message_count).times do |idx|
+        client.add_message(default_message_params)
+        client.flushed?.should be_false
+      end
+      client.flush
+      client.flushed?.should be_true
+      client.results[:results].size.should == message_count
+    end
+  end
+
+  describe "#message_buffer_size=" do
+    it "can set the buffer size" do
+      client.message_buffer_size=(10)
+      client.message_buffer_size.should == 10
+    end
+
+    it "cannot set an invalid buffer size" do
+      default_buffer_size = 20
+      client.message_buffer_size=(-1)
+      client.message_buffer_size.should == default_buffer_size
+
+      client.message_buffer_size=(0)
+      client.message_buffer_size.should == default_buffer_size
+
+      client.message_buffer_size=(101)
+      client.message_buffer_size.should == default_buffer_size
+
+      client.message_buffer_size=(1)
+      client.message_buffer_size.should == 1
+
+      client.message_buffer_size=(100)
+      client.message_buffer_size.should == 100
+    end
   end
 
   describe "#bulk_send" do
 
     before do
-      @common_options={:fromEmail => "bob@example.com", :customHeaders => {"customfield1"=>"custom value 1", "customfield2"=>"custom value 2"}}
+      @common_options={:fromEmail => "bob@example.com", :customHeaders => {"reply-to"=>"no-reply@example.com"}}
     end
 
-    describe "#add_message" do
-      it "buffered send that adds to empty buffer" do
-        client.send_common_info=@common_options
-        client.email_buffer.size.should == 0
-        client.add_message(required_params)
-        client.email_buffer.size.should == 1
-      end
-
-      it "buffered send that adds to a buffer and auto-flushes" do
-        FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => create_success_result(client.email_buffer_size).to_json)
-        client.send_common_info=@common_options
-        client.send_return_status[:results].size.should == 0
-        (client.email_buffer_size-1).times do |idx|
-          client.add_message(required_params).should == idx+1
-          client.send_return_status[:results].size.should == 0
-        end
-        client.add_message(required_params).should == 0
-        client.send_return_status[:results].size.should == client.email_buffer_size
-      end
-    end
-
-    describe "#flush" do
-      it "flush called on empty buffer" do
-        client.send_common_info=@common_options
-        client.send_return_status[:results].size.should == 0
-        client.flush
-        client.send_return_status[:results].size.should == 0
-      end
-      it "flush called on filled buffer" do
-        FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => create_success_result(10).to_json)
-        client.send_common_info=@common_options
-        10.times do
-          client.add_message(required_params)
-        end
-        client.flush
-        client.send_return_status[:results].size.should == 10
-      end
-    end
-
-    it "send an empty buffer" do
-      expect do
-        response = client.buffered_send([], @common_options)
-        response[:successCount].should == 0
-      end.should_not raise_error
-    end
-
-    it "send a single item buffer" do
-      buffer=[required_params]
-      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => @simple_success_result.to_json)
-      #expect do
-      response = client.buffered_send(buffer, @common_options)
-      FakeWeb.last_request.body.should =~ /json=/
-      response[:successCount].should == 1
-      #end.should_not raise_error
-    end
-
-    it "send a several item buffer" do
-      buffer=[required_params, required_params]
-      @success_result2 = {
-        "statusMessage" => "OK",
-        "successCount" => 2,
-        "failureCount" => 0,
-        "results" => [
-          {
-            "status" => 200,
-            "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
-          },
-          {
-            "status" => 200,
-            "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd2"
-          }
-        ]}
-      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v2/emails/send", :body => @success_result2.to_json)
-      expect do
-        response = client.buffered_send(buffer, @common_options)
-        FakeWeb.last_request.body.should =~ /json=/
-        response[:successCount].should == 2
-      end.should_not raise_error
-    end
+    #xit "send a several item buffer" do
+    #  buffer=[required_params, required_params]
+    #  @success_result2 = {
+    #    "statusMessage" => "OK",
+    #    "successCount" => 2,
+    #    "failureCount" => 0,
+    #    "results" => [
+    #      {
+    #        "status" => 200,
+    #        "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
+    #      },
+    #      {
+    #        "status" => 200,
+    #        "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd2"
+    #      }
+    #    ]}
+    #  FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v3/emails/send", :body => @success_result2.to_json)
+    #  expect do
+    #    client.add_message(buffer)
+    #    response = client.buffered_send(buffer, @common_options)
+    #    FakeWeb.last_request.body.should =~ /json=/
+    #    response[:successCount].should == 2
+    #  end.should_not raise_error
+    #end
   end
 
   describe "#get_error_report" do
@@ -140,7 +182,8 @@ describe MessagebusRubyApi::Client do
         ]
       }
 
-      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v2/emails/error_report?apiKey=#{@api_key}", :body => @success_result.to_json)
+      #FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v3/emails/error_report?apiKey=#{@api_key}", :body => @success_result.to_json)
+      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v3/delivery_errors", :body => @success_result.to_json)
       expect do
         response = client.get_error_report
         FakeWeb.last_request.body.should be_nil
@@ -159,7 +202,7 @@ describe MessagebusRubyApi::Client do
         {:email=>"test1@example.com", :message_send_time=>"2011-01-01T03:02:00", :unsubscribe_time=>"2011-01-02T04:32:00", :message_id=>"testmessageid1"},
         {:email=>"test2@example.com", :message_send_time=>"2011-01-01T02:02:00", :unsubscribe_time=>"2011-01-02T02:32:00", :message_id=>"testmessageid2"}
       ]
-      expected_request="https://api.messagebus.com/api/v2/blocked_emails?apiKey=#{@api_key}&startDate=#{URI.escape(start_date_str)}&endDate=#{URI.escape(end_date_str)}"
+      expected_request="https://api.messagebus.com/api/v3/unsubscribes?startDate=#{URI.escape(start_date_str)}&endDate=#{URI.escape(end_date_str)}"
 
       FakeWeb.register_uri(:get, expected_request, :body => @success_result.to_json)
       expect do
@@ -175,7 +218,7 @@ describe MessagebusRubyApi::Client do
       mailing_list_key="test_key"
       to_email="test@example.com"
 
-      expected_request="https://api.messagebus.com/api/v2/mailing_list_entry"
+      expected_request="https://api.messagebus.com/api/v3/mailing_list/test_key/entry/test@example.com"
 
       FakeWeb.register_uri(:delete, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
@@ -192,7 +235,7 @@ describe MessagebusRubyApi::Client do
     it "add to mailing list" do
       mailing_list_key="test_key"
       merge_fields={"%EMAIL%"=>"a@example.com", "%PARAM1%"=>"test value"}
-      expected_request="https://api.messagebus.com/api/v2/mailing_list_entry/add_entry"
+      expected_request="https://api.messagebus.com/api/v3/mailing_list/test_key/entries"
 
       FakeWeb.register_uri(:post, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
@@ -206,7 +249,7 @@ describe MessagebusRubyApi::Client do
 
   describe "#get_mailing_lists" do
     it "get mailing lists" do
-      expected_request="https://api.messagebus.com/api/v2/mailingLists?apiKey=#{@api_key}"
+      expected_request="https://api.messagebus.com/api/v3/mailing_lists"
 
       FakeWeb.register_uri(:get, expected_request, :body => create_results_array.to_json)
       expect do

@@ -1,55 +1,65 @@
-module MessagebusRubyApi
-  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com:443'
+module MessagebusApi
+  DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com'
 
-  class Client
-    attr_reader :api_key, :endpoint_url, :http
-    attr_reader :email_buffer, :send_return_status, :email_buffer_size, :user_agent
+  class Messagebus
     attr_writer :send_common_info
-    @empty_send_results=nil
 
     def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
       @api_key = verified_reasonable_api_key(api_key)
-      @endpoint_url = URI.parse(endpoint_url_string)
-      @end_point_v2_base_path="/api/v2/"
-      @http = Net::HTTP.new(@endpoint_url.host, @endpoint_url.port)
-      @http.use_ssl = true
+
+      @http = http_connection(endpoint_url_string)
       @user_agent = "MessagebusAPI:#{MessagebusRubyApi::VERSION}-Ruby:#{RUBY_VERSION}"
 
-      @email_buffer_size=20
-      @email_buffer=[]
-      @empty_send_results= {
-        :statusMessage => "",
-        :successCount => 0,
-        :failureCount => 0,
-        :results => []
-      }
-      @send_return_status=@empty_send_results
-      @send_common_info={}
+      @msg_buffer_size = 20
+      @msg_buffer = []
+      @msg_buffer_flushed = false
+      @send_common_info = {}
+      @results = base_response_params
+      @rest_endpoints = define_rest_endpoints
+      @rest_http_errors = define_rest_http_errors
     end
 
-    def add_message(email_options)
-      @email_buffer<<email_options
-      if (@email_buffer.size >= @email_buffer_size)
+    def results
+      @results
+    end
+
+    def message_buffer_size=(size)
+      @msg_buffer_size = size if (size >= 1 && size <= 100)
+    end
+
+    def message_buffer_size
+      @msg_buffer_size
+    end
+
+    def flushed?
+      @msg_buffer_flushed
+    end
+
+    def add_message(msg_options, flush_buffer = false)
+      @msg_buffer << msg_options
+      @msg_buffer_flushed = false
+      if flush_buffer || @msg_buffer.size >= @msg_buffer_size
         flush
-        return 0
-      else
-        return @email_buffer.size
       end
+      return
     end
 
     def flush
-      if (@email_buffer.size==0)
-        @send_return_status=@empty_send_results
+      if (@msg_buffer.size==0)
+        @results=@empty_send_results
         return
       end
-      @send_return_status=buffered_send(@email_buffer, @send_common_info)
-      @email_buffer.clear
-      @send_return_status
+      request = create_api_post_request(@rest_endpoints[:emails_send])
+      request.form_data={'json' => make_json_message_from_list(@msg_buffer, @send_common_info)}
+      @results=make_api_call(request)
+      @msg_buffer.clear
+      @msg_buffer_flushed = true
+      return
     end
 
     def add_mailing_list_entry(mailing_list_key, merge_fields)
-      request = create_api_post_request("#{@end_point_v2_base_path}mailing_list_entry/add_entry")
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      url = @rest_endpoints[:mailing_lists_entries].gsub("%KEY%", mailing_list_key)
+      request = create_api_post_request(url)
       json = {
         "apiKey" => @api_key,
         "mailingListKey" => mailing_list_key,
@@ -60,8 +70,8 @@ module MessagebusRubyApi
     end
 
     def remove_mailing_list_entry(mailing_list_key, to_email)
-      request = create_api_delete_request("#{@end_point_v2_base_path}mailing_list_entry")
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      url = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key).gsub("%EMAIL%", to_email)
+      request = create_api_delete_request(url)
       json = {
         "apiKey" => @api_key,
         "mailingListKey" => mailing_list_key,
@@ -72,14 +82,12 @@ module MessagebusRubyApi
     end
 
     def get_mailing_lists
-      request=create_api_get_request("#{@end_point_v2_base_path}mailingLists?apiKey=#{@api_key}")
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      request=create_api_get_request(@rest_endpoints[:mailing_lists])
       make_api_call(request)
     end
 
     def get_error_report
-      request=create_api_get_request("#{@end_point_v2_base_path}emails/error_report?apiKey=#{@api_key}")
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      request=create_api_get_request(@rest_endpoints[:delivery_errors])
       make_api_call(request)
     end
 
@@ -90,45 +98,41 @@ module MessagebusRubyApi
       unless (end_date.nil?)
         additional_params+="&endDate=#{URI.escape("#{end_dt}")}"
       end
-      request=create_api_get_request("#{@end_point_v2_base_path}blocked_emails?apiKey=#{@api_key}&#{additional_params}")
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
+      url = "#{@rest_endpoints[:unsubscribes]}?#{additional_params}"
+      request=create_api_get_request(url)
       make_api_call(request)
-    end
-
-    def basic_auth_credentials=(credentials)
-      @credentials = credentials
     end
 
     def buffered_send(message_list, common_options)
-      if (message_list.length==0)
-        return {
-          :statusMessage => "OK",
-          :successCount => 0,
-          :failureCount => 0}
-      end
-      request = create_api_post_request("#{@end_point_v2_base_path}emails/send")
-      request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
-      request.form_data={'json' => make_json_message_from_list(message_list, common_options)}
-      make_api_call(request)
     end
 
     private
 
+    def http_connection(endpoint_url_string)
+      endpoint_url = URI.parse(endpoint_url_string)
+      http = Net::HTTP.new(endpoint_url.host, endpoint_url.port)
+      http.use_ssl = true
+      http
+    end
+
+    def common_http_headers
+      {'User-Agent' => @user_agent, 'X-MessageBus-Key' => @api_key}
+    end
+
+    def rest_post_headers
+      {"Content-Type" => "application/json; charset=utf-8"}
+    end
+
     def create_api_post_request(path)
-      Net::HTTP::Post.new(path, {'User-Agent' => user_agent})
+      Net::HTTP::Post.new(path, common_http_headers.merge(rest_post_headers))
     end
 
     def create_api_get_request(path)
-      Net::HTTP::Get.new(path, {'User-Agent' => user_agent})
+      Net::HTTP::Get.new(path, common_http_headers)
     end
 
     def create_api_delete_request(path)
-      Net::HTTP::Delete.new(path, {'User-Agent' => user_agent})
-    end
-
-    def check_priority(priority)
-      raise APIParameterError.new(":priority can only be an integer between 1 and 5, not \"#{priority}\"") unless priority.is_a?(Integer) && (1..5).include?(priority)
-      priority.to_s
+      Net::HTTP::Delete.new(path, common_http_headers)
     end
 
     def verified_reasonable_api_key(api_key)
@@ -141,7 +145,6 @@ module MessagebusRubyApi
       raise APIParameterError.new("fromEmail") unless params[:fromEmail]
       raise APIParameterError.new("subject") unless params[:subject]
       raise APIParameterError.new("plaintextBody or htmlBody") unless params[:plaintextBody] || params[:htmlBody]
-      params[:priority] = check_priority(params[:priority]) unless params[:priority].nil?
     end
 
     def make_json_message(options)
@@ -180,7 +183,6 @@ module MessagebusRubyApi
 
     def make_api_call(request, symbolize_names=true)
       response = @http.start do |http|
-        request.basic_auth(@credentials[:user], @credentials[:password]) if @credentials
         http.request(request)
       end
       case response
@@ -206,5 +208,67 @@ module MessagebusRubyApi
       end
       raise "Could not determine response"
     end
+
+    def define_rest_endpoints
+      {
+        :emails_send => "/api/v3/emails/send",
+        :templates_send => "/api/v3/templates/send",
+        :stats => "/api/v3/stats",
+        :delivery_errors => "/api/v3/delivery_errors",
+        :unsubscribes => "/api/v3/unsubscribes",
+        :mailing_lists => "/api/v3/mailing_lists",
+        :mailing_lists_entries => "/api/v3/mailing_list/%KEY%/entries",
+        :mailing_lists_entry_email => "/api/v3/mailing_list/%KEY%/entry/%EMAIL%",
+        :version => "/api/version"
+      }
+    end
+
+    def define_rest_http_errors
+      {
+        "400" => "Invalid Request",
+        "401" => "Unauthorized-Missing API Key",
+        "403" => "Unauthorized-Invalid API Key",
+        "404" => "Incorrect URL",
+        "405" => "Method not allowed",
+        "406" => "Format not acceptable",
+        "408" => "Request Timeout",
+        "409" => "Conflict",
+        "410" => "Object missing or deleted",
+        "413" => "Too many messages in request",
+        "415" => "POST JSON data invalid",
+        "422" => "Unprocessable Entity",
+        "500" => "Internal Server Error",
+        "501" => "Not Implemented",
+        "503" => "Service Unavailable",
+        "507" => "Insufficient Storage"
+      }
+    end
+
+    def base_response_params
+      {:statusCode => 0,
+       :statusMessage => "",
+       :statusTime => "1970-01-01T00:00:00.000Z"}
+    end
+
+    def base_message_params
+      {:toEmail => '',
+       :fromEmail => '',
+       :subject => '',
+       :toName => '',
+       :fromName => '',
+       :plaintextBody => '',
+       :htmlBody => '',
+       :customHeaders => [],
+       :tags => [] }
+    end
+
+    def base_template_params
+      {:toEmail => '',
+       :toName => '',
+       :templateKey => '',
+       :mergeFields => [],
+       :customHeaders => [] }
+    end
+
   end
 end
