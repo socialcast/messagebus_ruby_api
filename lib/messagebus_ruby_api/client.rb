@@ -2,16 +2,20 @@ module MessagebusApi
   DEFAULT_API_ENDPOINT_STRING = 'https://api.messagebus.com'
 
   class Messagebus
+    TEMPLATE = 'template'
+    EMAIL= 'email'
+
     attr_writer :send_common_info
 
-    def initialize(api_key, endpoint_url_string = DEFAULT_API_ENDPOINT_STRING)
+    def initialize(api_key)
       @api_key = verified_reasonable_api_key(api_key)
 
-      @http = http_connection(endpoint_url_string)
+      @http = http_connection(DEFAULT_API_ENDPOINT_STRING)
       @user_agent = "MessagebusAPI:#{MessagebusRubyApi::VERSION}-Ruby:#{RUBY_VERSION}"
 
       @msg_buffer_size = 20
       @msg_buffer = []
+      @msg_type = nil
       @msg_buffer_flushed = false
       @send_common_info = {}
       @results = base_response_params
@@ -35,8 +39,17 @@ module MessagebusApi
       @msg_buffer_flushed
     end
 
-    def add_message(msg_options, flush_buffer = false)
-      @msg_buffer << msg_options
+    def api_version
+      make_api_get_call(@rest_endpoints[:version])
+    end
+
+    def add_message(params, flush_buffer = false)
+      if params.key?(:templateKey)
+        add_template_message(params)
+      else
+        add_email_message(params)
+      end
+
       @msg_buffer_flushed = false
       if flush_buffer || @msg_buffer.size >= @msg_buffer_size
         flush
@@ -49,62 +62,84 @@ module MessagebusApi
         @results=@empty_send_results
         return
       end
-      request = create_api_post_request(@rest_endpoints[:emails_send])
-      request.form_data={'json' => make_json_message_from_list(@msg_buffer, @send_common_info)}
-      @results=make_api_call(request)
+
+      if @msg_type == TEMPLATE
+        endpoint = @rest_endpoints[:templates_send]
+      else
+        endpoint = @rest_endpoints[:emails_send]
+      end
+
+      json = json_message_from_list(@msg_buffer)
+      @results=make_api_post_call(endpoint, json)
       @msg_buffer.clear
       @msg_buffer_flushed = true
       return
     end
 
+    def mailing_lists
+      make_api_get_call(@rest_endpoints[:mailing_lists])
+    end
+
+    def create_mailing_lists(list_name, merge_field_keys)
+      json = {:name => list_name, :mergeFieldKeys => merge_field_keys}.to_json
+      @results = make_api_post_call(@rest_endpoints[:mailing_lists], json)
+      @results
+    end
+
+    def unsubscribes(start_date = '', end_date = '')
+      end_date = set_date(end_date, 0)
+      start_date = set_date(start_date, 7)
+      path = "#{@rest_endpoints[:unsubscribes]}?#{date_range(start_date, end_date)}"
+      @results = make_api_get_call(path)
+      @results
+    end
+
+    def delivery_errors(start_date = '', end_date = '')
+      end_date = set_date(end_date, 0)
+      start_date = set_date(start_date, 1)
+      path = "#{@rest_endpoints[:delivery_errors]}?#{date_range(start_date, end_date)}"
+      @results = make_api_get_call(path)
+      @results
+    end
+
+    def stats(start_date = '', end_date = '', tag = '')
+      end_date = set_date(end_date, 0)
+      start_date = set_date(start_date, 30)
+      path = "#{@rest_endpoints[:stats]}?#{date_range(start_date, end_date)}&tag=#{tag}"
+      @results = make_api_get_call(path)
+      @results
+    end
+
+    def delete_mailing_list_entry(mailing_list_key, email)
+      path = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key).gsub("%EMAIL%", email)
+      @results = make_api_delete_call(path)
+      @results
+    end
+
     def add_mailing_list_entry(mailing_list_key, merge_fields)
-      url = @rest_endpoints[:mailing_lists_entries].gsub("%KEY%", mailing_list_key)
-      request = create_api_post_request(url)
-      json = {
-        "apiKey" => @api_key,
-        "mailingListKey" => mailing_list_key,
-        "mergeFields" => merge_fields
-      }.to_json
-      request.form_data={'json' => json}
-      make_api_call(request)
+      path = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key)
+      json = {:mergeField => merge_fields}.to_json
+      @results = make_api_post_call(path, json)
+      @results
     end
 
-    def remove_mailing_list_entry(mailing_list_key, to_email)
-      url = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key).gsub("%EMAIL%", to_email)
-      request = create_api_delete_request(url)
-      json = {
-        "apiKey" => @api_key,
-        "mailingListKey" => mailing_list_key,
-        "email" => to_email
-      }.to_json
-      request.form_data={'json' => json}
-      make_api_call(request)
-    end
-
-    def get_mailing_lists
-      request=create_api_get_request(@rest_endpoints[:mailing_lists])
-      make_api_call(request)
-    end
 
     def get_error_report
       request=create_api_get_request(@rest_endpoints[:delivery_errors])
-      make_api_call(request)
+      #make_api_call(request)
     end
 
-    def get_unsubscribe_results(start_date, end_date=nil)
-      start_dt = DateTime.parse(start_date)
-      end_dt = DateTime.parse(end_date)
-      additional_params="startDate=#{URI.escape("#{start_dt}")}"
-      unless (end_date.nil?)
-        additional_params+="&endDate=#{URI.escape("#{end_dt}")}"
-      end
-      url = "#{@rest_endpoints[:unsubscribes]}?#{additional_params}"
-      request=create_api_get_request(url)
-      make_api_call(request)
-    end
-
-    def buffered_send(message_list, common_options)
-    end
+    #def get_unsubscribe_results(start_date, end_date=nil)
+    #  start_dt = DateTime.parse(start_date)
+    #  end_dt = DateTime.parse(end_date)
+    #  additional_params="startDate=#{URI.escape("#{start_dt}")}"
+    #  unless (end_date.nil?)
+    #    additional_params+="&endDate=#{URI.escape("#{end_dt}")}"
+    #  end
+    #  url = "#{@rest_endpoints[:unsubscribes]}?#{additional_params}"
+    #  request=create_api_get_request(url)
+    #  #make_api_call(request)
+    #end
 
     private
 
@@ -123,16 +158,42 @@ module MessagebusApi
       {"Content-Type" => "application/json; charset=utf-8"}
     end
 
-    def create_api_post_request(path)
-      Net::HTTP::Post.new(path, common_http_headers.merge(rest_post_headers))
+    #def create_api_post_request(path)
+    #  Net::HTTP::Post.new(path, common_http_headers.merge(rest_post_headers))
+    #end
+    #
+    #def create_api_get_request(path)
+    #  Net::HTTP::Get.new(path, common_http_headers)
+    #end
+    #
+    #def create_api_delete_request(path)
+    #  Net::HTTP::Delete.new(path, common_http_headers)
+    #end
+
+    def add_email_message(params)
+      @msg_type = EMAIL if @msg_type == nil
+      @msg_buffer << base_message_params.merge!(params)
+
     end
 
-    def create_api_get_request(path)
-      Net::HTTP::Get.new(path, common_http_headers)
+    def add_template_message(params)
+      @msg_type = TEMPLATE if @msg_type == nil
+      @msg_buffer << base_template_params.merge!(params)
     end
 
-    def create_api_delete_request(path)
-      Net::HTTP::Delete.new(path, common_http_headers)
+    def date_range(start_date, end_date)
+      "startDate=#{start_date}&endDate=#{end_date}"
+    end
+
+    def set_date(date_string, days_ago)
+      if date_string.length == 0
+        return date_str_for_time_range(days_ago)
+      end
+      date_string
+    end
+
+    def date_str_for_time_range(days_ago)
+      (Time.now.utc - (days_ago*86400)).strftime("%Y-%m-%d")
     end
 
     def verified_reasonable_api_key(api_key)
@@ -140,57 +201,35 @@ module MessagebusApi
       api_key
     end
 
-    def validate(params)
-      raise APIParameterError.new("toEmail") unless params[:toEmail]
-      raise APIParameterError.new("fromEmail") unless params[:fromEmail]
-      raise APIParameterError.new("subject") unless params[:subject]
-      raise APIParameterError.new("plaintextBody or htmlBody") unless params[:plaintextBody] || params[:htmlBody]
+    def json_message_from_list(messages)
+      {:messages => messages}.to_json
     end
 
-    def make_json_message(options)
-      map={}
-      map["toEmail"]=options[:toEmail] if (options.has_key? :toEmail)
-      map["toName"]=options[:toName] if (options.has_key? :toName)
-      map["subject"]=options[:subject] if (options.has_key? :subject)
-      map["plaintextBody"]=options[:plaintextBody] if (options.has_key? :plaintextBody)
-      map["htmlBody"]=options[:htmlBody] if (options.has_key? :htmlBody)
-      map["fromName"]=options[:fromName] if (options.has_key? :fromName)
-      map["tag"]=options[:tag] if (options.has_key? :tag)
-      map["mergeFields"]=options[:mergeFields] if (options.has_key? :mergeFields)
-      map
+    def make_api_post_call(path, data)
+      headers = common_http_headers.merge(rest_post_headers)
+      response = @http.request_post(path, data, headers)
+      check_response(response)
     end
 
-    def make_json_message_from_list(option_list, common_options)
-      message_list=[]
-      option_list.each do |list_item|
-        message_list<<make_json_message(list_item)
-      end
-      json = {
-        "apiKey" => @api_key,
-        "messageCount" => message_list.length,
-        "messages" => message_list
-      }
-      if (common_options!=nil)
-        json["fromEmail"]=common_options[:fromEmail] if (common_options.has_key? :fromEmail)
-        json["fromName"]=common_options[:fromName] if (common_options.has_key? :fromName)
-        json["tags"]=common_options[:tags] if (common_options.has_key? :tags)
-        json["customHeaders"]=common_options[:customHeaders] if (common_options.has_key? :customHeaders)
-        json["templateKey"]=common_options[:templateKey] if (common_options.has_key? :templateKey)
-      end
-
-      json.reject { |k, v| v == nil }.to_json
+    def make_api_get_call(path)
+      headers = common_http_headers
+      response = @http.request_get(path, headers)
+      check_response(response)
     end
 
-    def make_api_call(request, symbolize_names=true)
-      response = @http.start do |http|
-        http.request(request)
-      end
+    def make_api_delete_call(path)
+      headers = common_http_headers
+      response = @http.delete(path, headers)
+      check_response(response)
+    end
+
+    def check_response(response, symbolize_names=true)
       case response
         when Net::HTTPSuccess
           begin
             return JSON.parse(response.body, :symbolize_names => symbolize_names)
           rescue JSON::ParserError => e
-            raise MessagebusRubyApi::RemoteServerError.new("Remote server returned unrecognized response: #{e.message}")
+            raise MessagebusRubyApi::RemoteServerError.new("JSON parsing error.  Response started with #{response.body.slice(0..9)}")
           end
         when Net::HTTPClientError, Net::HTTPServerError
           if (response.body && response.body.size > 0)
@@ -199,14 +238,24 @@ module MessagebusApi
             rescue JSON::ParserError
               nil
             end
-            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}.  #{result[:statusMessage] if result}", result)
+            raise MessagebusRubyApi::RemoteServerError.new("#{response.code.to_s}:#{rest_http_error_message(response.code.to_s)}")
           else
-            raise MessagebusRubyApi::RemoteServerError.new("Remote Server Returned: #{response.code.to_s}")
+            raise MessagebusRubyApi::RemoteServerError.new("#{response.code.to_s}:#{rest_http_error_message(response.code.to_s)}")
           end
         else
           raise "Unexpected HTTP Response: #{response.class.name}"
       end
       raise "Could not determine response"
+    end
+
+    def rest_http_error?(status_code)
+      @rest_http_errors.key?(status_code)
+    end
+
+    def rest_http_error_message(status_code)
+      message = "Unknown Error Code"
+      message = @rest_http_errors[status_code] if rest_http_error?(status_code)
+      message
     end
 
     def define_rest_endpoints
@@ -258,7 +307,7 @@ module MessagebusApi
        :fromName => '',
        :plaintextBody => '',
        :htmlBody => '',
-       :customHeaders => [],
+       :customHeaders => {},
        :tags => [] }
     end
 
@@ -266,8 +315,8 @@ module MessagebusApi
       {:toEmail => '',
        :toName => '',
        :templateKey => '',
-       :mergeFields => [],
-       :customHeaders => [] }
+       :mergeFields => {},
+       :customHeaders => {} }
     end
 
   end

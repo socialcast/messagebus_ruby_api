@@ -79,6 +79,16 @@ describe MessagebusApi::Messagebus do
       client.flushed?.should be_true
     end
 
+    it "should have user-agent and x-messagebus-key set in request headers" do
+      FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v3/emails/send", :body => create_success_result(client.message_buffer_size).to_json)
+      client.add_message(default_message_params, true)
+      client.flushed?.should be_true
+
+      FakeWeb.last_request.get_fields("X-MessageBus-Key").should_not be_nil
+      FakeWeb.last_request.get_fields("User-Agent").should_not be_nil
+      FakeWeb.last_request.get_fields("Content-Type").should_not be_nil
+    end
+
     it "buffered send that adds to a buffer and auto-flushes" do
       FakeWeb.register_uri(:post, "https://api.messagebus.com/api/v3/emails/send", :body => create_success_result(client.message_buffer_size).to_json)
       client.send_common_info=@common_options
@@ -168,11 +178,11 @@ describe MessagebusApi::Messagebus do
     #end
   end
 
-  describe "#get_error_report" do
-    it "request error report" do
+  describe "#delivery_errors" do
+    it "request delivery errors list" do
 
-      start_date_str="2011-01-01T04:30:00+00:00"
-      end_date_str="2011-01-02T04:30:00+00:00"
+      start_date_str="2011-01-01"
+      end_date_str="2011-01-02"
 
       @success_result={
         :reportSize=>2,
@@ -183,9 +193,9 @@ describe MessagebusApi::Messagebus do
       }
 
       #FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v3/emails/error_report?apiKey=#{@api_key}", :body => @success_result.to_json)
-      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v3/delivery_errors", :body => @success_result.to_json)
+      FakeWeb.register_uri(:get, "https://api.messagebus.com/api/v3/delivery_errors?startDate=#{start_date_str}&endDate=#{end_date_str}", :body => @success_result.to_json)
       expect do
-        response = client.get_error_report
+        response = client.delivery_errors(start_date_str, end_date_str)
         FakeWeb.last_request.body.should be_nil
         response.should == @success_result
       end.should_not raise_error
