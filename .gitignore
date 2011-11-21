@@ -2,3 +2,4 @@
 *.gem
 .rvmrc
 .gitignore
+.bundle
