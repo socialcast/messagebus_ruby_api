@@ -44,6 +44,15 @@
     - list recent email statistics
     - list recent delivery errors
 
+== SSL Certificates
+
+    If you encounter SSL certificate problems, use the cacert_info() method to specify a
+    cacert.pem file (remember to specify the full path).
+
+    The curl site has an up to date version of the file:
+
+    http://curl.haxx.se/ca/cacert.pem
+
 == Older Versions
 
 If you are using the old api with the text OK:<UUID> responses, please be sure to get the 'v1' branch
