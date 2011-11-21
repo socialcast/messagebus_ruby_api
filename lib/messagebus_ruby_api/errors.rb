@@ -9,6 +9,9 @@ module MessagebusRubyApi
   class BadAPIKeyError < StandardError
   end
 
+  class MissingFileError <StandardError
+  end
+
   class RemoteServerError < StandardError
     attr_reader :result
     def initialize(message, result={})

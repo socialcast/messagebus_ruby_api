@@ -123,6 +123,14 @@ module MessagebusApi
       @results
     end
 
+    def cacert_info(cert_file)
+      @http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      if !File.exists?(cert_file)
+        raise MessagebusRubyApi::MissingFileError.new("Unable to read file #{cert_file}")
+      end
+      @http.ca_file = File.join(cert_file)
+    end
+
     private
 
     def http_connection(endpoint_url_string)
