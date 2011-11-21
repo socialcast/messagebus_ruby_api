@@ -2,22 +2,74 @@ require 'rubygems'
 require 'json'
 require 'date'
 require 'pp'
-require 'messagebus_ruby_api'
+require '../lib/messagebus_ruby_api'
 
-# login to demo api
+# This example demonstrates various api methods relating to mailing list management.
+# We create a new blank mailing list; add two entries to the new list; delete one of
+# the entries; and then retrieve the list of all mailing lists
+
 api_key="YOUR_ACCOUNT_API_KEY_GOES_HERE"
-client= MessagebusRubyApi::Client.new(api_key)
+client= MessagebusApi::Messagebus.new(api_key)
 
 begin
-  response = client.get_mailing_lists
+  # first create a new blank mailing list
+  name = 'example mailing list'
+  merge_field_keys = ["%EMAIL%", "%FIRST_NAME%", "%LAST_NAME%"]
 
-  if response[:statusMessage] == "OK"
-    response[:results].each do |item|
-      puts "Mailing list: #{item[:name]} with key #{item[:key]}"
-    end
+  status = client.create_mailing_lists(name, merge_field_keys)
+
+  if status[:statusCode] == 201
+    mailing_list_key = status[:key]
+    puts "A mailing list with key #{mailing_list_key} was created"
+  else
+    puts "Problem in getting unsubscribe list. #{status[:statusCode]}-#{status[:statusMessage]}"
+    exit
   end
+
+  # after the new mailing list is created, add two entries to the list
+  email1 = "jane@example.com"
+  merge_fields = {"%EMAIL%" => email1, "%FIRST_NAME%" => "Jane", "%LAST_NAME%" => "Smith"}
+  status = client.add_mailing_list_entry(mailing_list_key, merge_fields)
+  if status[:statusCode] == 201
+    puts "Entry #{email1} was added to the mailing list"
+  else
+    puts "Problem in adding mailing list entry for #{email1}. #{status[:statusCode]}-#{status[:statusMessage]}"
+    exit
+  end
+
+  email2 = "john@example.com"
+  merge_fields = {"%EMAIL%" => email2, "%FIRST_NAME%" => "John", "%LAST_NAME%" => "Doe"}
+  status = client.add_mailing_list_entry(mailing_list_key, merge_fields)
+  if status[:statusCode] == 201
+    puts "Entry #{email2} was added to the mailing list"
+  else
+    puts "Problem in adding mailing list entry for #{email2}. #{status[:statusCode]}-#{status[:statusMessage]}"
+    exit
+  end
+
+  # having added two entries, delete one of them
+  status = client.delete_mailing_list_entry(mailing_list_key, email2)
+  if status[:statusCode] == 200
+    puts "Entry #{email2} was deleted from the mailing list"
+  else
+    puts "Problem deleting mailing list entry for #{email2}. #{status[:statusCode]}-#{status[:statusMessage]}"
+    exit
+  end
+
+  # list all the mailing lists
+  status = client.mailing_lists
+  if status[:statusCode] == 200
+    puts "The following mailing lists exist:"
+    status[:results].each do |list|
+      puts "List #{list[:name]} with key #{list[:key]}"
+    end
+  else
+    puts "Problem getting mailing lists. #{status[:statusCode]}-#{status[:statusMessage]}"
+    exit
+  end
+
 rescue Exception => e
-  puts "Error occurred while getting mailing lists."
+  puts "Error occurred while modifying mailing lists."
   puts e.message
 end
 

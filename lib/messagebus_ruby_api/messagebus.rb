@@ -8,7 +8,7 @@ module MessagebusApi
     attr_writer :send_common_info
 
     def initialize(api_key)
-      @api_key = verified_reasonable_api_key(api_key)
+      @api_key = api_key
 
       @http = http_connection(DEFAULT_API_ENDPOINT_STRING)
       @user_agent = "MessagebusAPI:#{MessagebusRubyApi::VERSION}-Ruby:#{RUBY_VERSION}"
@@ -94,7 +94,7 @@ module MessagebusApi
 
     def add_mailing_list_entry(mailing_list_key, merge_fields)
       path = @rest_endpoints[:mailing_lists_entries].gsub("%KEY%", mailing_list_key)
-      json = {:mergeField => merge_fields}.to_json
+      json = {:mergeFields => merge_fields}.to_json
       @results = make_api_post_call(path, json)
       @results
     end
@@ -172,11 +172,6 @@ module MessagebusApi
 
     def date_str_for_time_range(days_ago)
       (Time.now.utc - (days_ago*86400)).strftime("%Y-%m-%d")
-    end
-
-    def verified_reasonable_api_key(api_key)
-      raise BadAPIKeyError unless api_key.match(/^[a-zA-Z0-9]{32}$/)
-      api_key
     end
 
     def json_message_from_list(messages)

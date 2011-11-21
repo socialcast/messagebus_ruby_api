@@ -13,17 +13,18 @@ params = { :toEmail => 'apitest1@messagebus.com',
       :toName => 'EmailUser',
       :fromEmail => 'api@messagebus.com',
       :fromName => 'API',
-      :subject => 'Unit Test Message',
+      :subject => 'Example Test Message',
       :customHeaders => {"sender"=>"apitest1@messagebus.com"},
       :plaintextBody => 'This message is only a test sent by the Ruby MessageBus client library.',
       :htmlBody => "<html><body>This message is only a test sent by the Ruby MessageBus client library.</body></html>",
-      :tags => ['RUBY', 'Unit Test Ruby']
+      :tags => ['RUBY']
     }
 
-
+# Send message with flush flag set to true.
+# Status Code of 202 is the expected response to the REST call
 begin
   client.add_message(params, true)
-  if client.results[:statusMessage] == "OK"
+  if client.results[:statusCode] == 202
     status = client.results
     puts "Successfully sent #{status[:successCount]} messages."
     puts "Message ID: #{status[:results][0][:messageId]}"
