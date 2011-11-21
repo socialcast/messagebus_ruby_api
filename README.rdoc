@@ -1,92 +1,56 @@
 = Messagebus Ruby API
-=Installation
+
+== Installation
+
   gem install messagebus_ruby_api
-= Examples
-Start by requiring MessagebusApi:
-  require 'messagebus_ruby_api'
-== Create the Api Client with your API key
-  client = MessagebusApi::Messagebus.new("<INSERT_YOUR_API_KEY>")
-==Sending Emails
-=== Setting common fields for your emails
-  client.send_common_info={:fromEmail=>"from@example.com"}
-==== When not using an API template
-=====Required send_common_info fields
-  :fromEmail
-=====Optional send_common_info fields
-  :fromName, :tags,
-   :customHeaders
-==== When using an API template
-=====Required send_common_info fields
-  :templateKey
-=====Optional send_common_info field
-  None
-=== Adding messages to the send buffer
-  result=client.add_message({:toEmail=>"to@example.com"})
-If you get a result >0 you get back the number of messages waiting to get sent
-If you get a result = 0 that means the buffer was flushed and you can get results from client.return_status
-Note: you should read from client.return_status before adding more messages since client.return_status will get cleared during the next auto-flush
-==== When not using an API template
-=====Required message fields
-  :toEmail, :subject, :plaintextBody or :htmlBody
-=====Optional message fields
-  :tag, :toName,
-==== When using an API template
-=====Required message fields
-  :mergeFields={"%EMAIL"=>"to@example.com", "%KEY1%"="testing"}
-  Note: the merge fields entries chould contain the keys used in the template, but only the %EMAIL% is required
-=====Optional message fields
-  None
-=== Flushing the send buffer
-  client.flush
-Note: Flushing returns the status of the messages that were sent (see bellow). It also clears old values to client.return_status
-Warning: You always need to flush your buffer when you are done adding messages to be sent or if you want to send messages with a different common_info (failure to do so could result in unsent messages getting lost or old messages getting sent with your new common_info
-=== Checking on message ids sent
-  client.return_status
-Status messages will be in the following form:
-  {
-      "statusMessage" => "OK",
-      "successCount" => 2,
-      "failureCount" => 0,
-      "results" => [
-            {
-          "status" => 200,
-          "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd1"
-            },
-            {
-          "status" => 200,
-          "messageId" => "e460d7f0-908e-012e-80b4-58b035f30fd2"
-            }
-      ]
-    }
-If there are failures you will get 400 or 500 status codes as well as error messages
-==Mailing List Management
-Calls take a mailing list key which can be found on the mailing list management page on messagebus.com
-Responses are of the form
-  {:statusMessage => "OK"}
-===Adding to a mailing list
-  merge_fields={"%EMAIL%"=>"a@example.com","%PARAM1%"=>"value 1"}
-  client.add_to_mailing_list(mailing_list_key, merge_fields)
-===Removing from a mailing list
-  client.remove_from_mailing_list(mailing_list_key, "a@example.com")
-==Viewing Error Reports
-  client.error_report
-results will be in the following form:
-  [
-    {:date=>"2011-08-16T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"4.2.1"},
-    {:date=>"2011-08-17T21:19:20+00:00", :address=>"someguy@example.com", :errorCode=>"5.0.0"}
-  ]
-==Viewing Unsubscribes By Date
-  client.blocked_emails
-results will be in the following form:
-  [
-    {:email=>"test558_7283@example.com",:unsubscribe_time=>"2011-08-31T19:24:00+00:00","message_send_time"=>"2011-08-31T17:29:16+00:00","message_id"=>"testid"},
-    {:email=>"test558_7283@example.com",:unsubscribe_time=>"2011-08-31T19:24:00+00:00","message_send_time"=>"2011-08-31T17:29:16+00:00","message_id"=>"testid2"}
-  ]
-= Older Versions
+
+== Basic Use
+
+=== Start by requiring MessabusApi:
+
+    require 'messagebus_ruby_api'
+
+=== Then create an instance of the Messagebus class with your account information
+
+    client = MessagebusApi::Messagebus.new("<INSERT_YOUR_API_KEY>")
+
+=== Sending a single message
+
+==== Create Required Parameters
+
+      params = { :toEmail => 'apitest1@messagebus.com',
+        :toName => 'EmailUser',
+        :fromEmail => 'api@messagebus.com',
+        :fromName => 'API',
+        :subject => 'Unit Test Message',
+        :customHeaders => ["sender"=>"apitest1@messagebus.com"],
+        :plaintextBody => 'This message is only a test sent by the Ruby MessageBus client library.',
+        :htmlBody => "<html><body>This message is only a test sent by the Ruby MessageBus client library.</body></html>",
+        :tags => ['RUBY']
+      }
+
+==== Send the message
+
+     client.add_message(params)
+
+== Examples
+
+    The provided examples illustrate how to:
+    - send a single email message in the simplest way
+    - send one or more emails (where the email body is passed with the api call)
+    - send one or more templated emails (where a key referencing a previously stored email body is passed with the api call)
+    - create a mailing list, add and delete mailing list entries and list the existing mailing lists
+    - list recent email unsubscribes
+    - list recent email statistics
+    - list recent delivery errors
+
+== Older Versions
+
 If you are using the old api with the text OK:<UUID> responses, please be sure to get the 'v1' branch
 If you are using the old api with the 'body' parameter (instead of the new 'plaintextBody' and 'htmlBody' parameters), please be sure to get the 'v0' branch
-= Tests
-To run the tests, issue the following command from the root of the project:
+
+== Tests
+  To run the tests, issue the following command from the root of the project:
   bundle exec rspec spec/messagebus_ruby_api/client_spec.rb
-= More info
-Contact MessageBus if you have questions or problems (https://www.messagebus.com/contact)
+== More info
+  Contact MessageBus if you have questions or problems (https://www.messagebus.com/contact)
