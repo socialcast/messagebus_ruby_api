@@ -2,10 +2,10 @@
 =Installation
   gem install messagebus_ruby_api
 = Examples
-Start by requiring MessagebusRubyApi:
+Start by requiring MessagebusApi:
   require 'messagebus_ruby_api'
 == Create the Api Client with your API key
-  client = MessagebusRubyApi::Client.new("<INSERT_YOUR_API_KEY>")
+  client = MessagebusApi::Messagebus.new("<INSERT_YOUR_API_KEY>")
 ==Sending Emails
 === Setting common fields for your emails
   client.send_common_info={:fromEmail=>"from@example.com"}
@@ -87,6 +87,6 @@ If you are using the old api with the text OK:<UUID> responses, please be sure t
 If you are using the old api with the 'body' parameter (instead of the new 'plaintextBody' and 'htmlBody' parameters), please be sure to get the 'v0' branch
 = Tests
 To run the tests, issue the following command from the root of the project:
-bundle exec rspec spec/messagebus_ruby_api/client_spec.rb
+  bundle exec rspec spec/messagebus_ruby_api/client_spec.rb
 = More info
 Contact MessageBus if you have questions or problems (https://www.messagebus.com/contact)
