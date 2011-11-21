@@ -216,7 +216,7 @@ describe MessagebusApi::Messagebus do
 
       FakeWeb.register_uri(:get, expected_request, :body => @success_result.to_json)
       expect do
-        response = client.get_unsubscribe_results(start_date_str, end_date_str)
+        response = client.unsubscribes(start_date_str, end_date_str)
         FakeWeb.last_request.body.should be_nil
         response.should == @success_result
       end.should_not raise_error
@@ -232,8 +232,8 @@ describe MessagebusApi::Messagebus do
 
       FakeWeb.register_uri(:delete, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
-        response = client.remove_mailing_list_entry(mailing_list_key, to_email)
-        FakeWeb.last_request.body.should =~ /json=/
+        response = client.delete_mailing_list_entry(mailing_list_key, to_email)
+        FakeWeb.last_request.body.should be_nil
         response.should == {:statusMessage => "OK"}
         FakeWeb.last_request.body
       end.should_not raise_error
@@ -244,26 +244,26 @@ describe MessagebusApi::Messagebus do
   describe "#add_mailing_list_entry" do
     it "add to mailing list" do
       mailing_list_key="test_key"
-      merge_fields={"%EMAIL%"=>"a@example.com", "%PARAM1%"=>"test value"}
+      merge_fields={"%EMAIL%"=>"test@example.com", "%PARAM1%"=>"test value"}
       expected_request="https://api.messagebus.com/api/v3/mailing_list/test_key/entries"
 
       FakeWeb.register_uri(:post, expected_request, :body => {"statusMessage" => "OK"}.to_json)
       expect do
         response = client.add_mailing_list_entry(mailing_list_key, merge_fields)
-        FakeWeb.last_request.body.should =~ /json=/
+        FakeWeb.last_request.body.should =~ /mergeField/
         response.should == {:statusMessage => "OK"}
       end.should_not raise_error
 
     end
   end
 
-  describe "#get_mailing_lists" do
+  describe "#mailing_lists" do
     it "get mailing lists" do
       expected_request="https://api.messagebus.com/api/v3/mailing_lists"
 
       FakeWeb.register_uri(:get, expected_request, :body => create_results_array.to_json)
       expect do
-        response = client.get_mailing_lists
+        response = client.mailing_lists
         response.should == {:statusMessage => "OK", :results => []}
       end.should_not raise_error
     end

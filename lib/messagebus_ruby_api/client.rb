@@ -86,6 +86,19 @@ module MessagebusApi
       @results
     end
 
+    def delete_mailing_list_entry(mailing_list_key, email)
+      path = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key).gsub("%EMAIL%", email)
+      @results = make_api_delete_call(path)
+      @results
+    end
+
+    def add_mailing_list_entry(mailing_list_key, merge_fields)
+      path = @rest_endpoints[:mailing_lists_entries].gsub("%KEY%", mailing_list_key)
+      json = {:mergeField => merge_fields}.to_json
+      @results = make_api_post_call(path, json)
+      @results
+    end
+
     def unsubscribes(start_date = '', end_date = '')
       end_date = set_date(end_date, 0)
       start_date = set_date(start_date, 7)
@@ -110,37 +123,6 @@ module MessagebusApi
       @results
     end
 
-    def delete_mailing_list_entry(mailing_list_key, email)
-      path = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key).gsub("%EMAIL%", email)
-      @results = make_api_delete_call(path)
-      @results
-    end
-
-    def add_mailing_list_entry(mailing_list_key, merge_fields)
-      path = @rest_endpoints[:mailing_lists_entry_email].gsub("%KEY%", mailing_list_key)
-      json = {:mergeField => merge_fields}.to_json
-      @results = make_api_post_call(path, json)
-      @results
-    end
-
-
-    def get_error_report
-      request=create_api_get_request(@rest_endpoints[:delivery_errors])
-      #make_api_call(request)
-    end
-
-    #def get_unsubscribe_results(start_date, end_date=nil)
-    #  start_dt = DateTime.parse(start_date)
-    #  end_dt = DateTime.parse(end_date)
-    #  additional_params="startDate=#{URI.escape("#{start_dt}")}"
-    #  unless (end_date.nil?)
-    #    additional_params+="&endDate=#{URI.escape("#{end_dt}")}"
-    #  end
-    #  url = "#{@rest_endpoints[:unsubscribes]}?#{additional_params}"
-    #  request=create_api_get_request(url)
-    #  #make_api_call(request)
-    #end
-
     private
 
     def http_connection(endpoint_url_string)
@@ -157,18 +139,6 @@ module MessagebusApi
     def rest_post_headers
       {"Content-Type" => "application/json; charset=utf-8"}
     end
-
-    #def create_api_post_request(path)
-    #  Net::HTTP::Post.new(path, common_http_headers.merge(rest_post_headers))
-    #end
-    #
-    #def create_api_get_request(path)
-    #  Net::HTTP::Get.new(path, common_http_headers)
-    #end
-    #
-    #def create_api_delete_request(path)
-    #  Net::HTTP::Delete.new(path, common_http_headers)
-    #end
 
     def add_email_message(params)
       @msg_type = EMAIL if @msg_type == nil
