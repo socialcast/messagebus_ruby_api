@@ -4,7 +4,7 @@ require "messagebus_ruby_api/version"
 
 Gem::Specification.new do |s|
   s.name        = "messagebus_ruby_api"
-  s.version     = MessagebusRubyApi::VERSION
+  s.version     = MessagebusApi::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Messagebus dev team"]
   s.email       = ["messagebus@googlegroups.com"]

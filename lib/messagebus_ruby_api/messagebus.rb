@@ -11,7 +11,7 @@ module MessagebusApi
       @api_key = api_key
 
       @http = http_connection(DEFAULT_API_ENDPOINT_STRING)
-      @user_agent = "MessagebusAPI:#{MessagebusRubyApi::VERSION}-Ruby:#{RUBY_VERSION}"
+      @user_agent = "MessagebusAPI:#{MessagebusApi::VERSION}-Ruby:#{RUBY_VERSION}"
 
       @msg_buffer_size = 20
       @msg_buffer = []
@@ -126,7 +126,7 @@ module MessagebusApi
     def cacert_info(cert_file)
       @http.verify_mode = OpenSSL::SSL::VERIFY_PEER
       if !File.exists?(cert_file)
-        raise MessagebusRubyApi::MissingFileError.new("Unable to read file #{cert_file}")
+        raise MessagebusApi::MissingFileError.new("Unable to read file #{cert_file}")
       end
       @http.ca_file = File.join(cert_file)
     end
@@ -202,7 +202,7 @@ module MessagebusApi
           begin
             return JSON.parse(response.body, :symbolize_names => symbolize_names)
           rescue JSON::ParserError => e
-            raise MessagebusRubyApi::RemoteServerError.new("JSON parsing error.  Response started with #{response.body.slice(0..9)}")
+            raise MessagebusApi::RemoteServerError.new("JSON parsing error.  Response started with #{response.body.slice(0..9)}")
           end
         when Net::HTTPClientError, Net::HTTPServerError
           if (response.body && response.body.size > 0)
@@ -211,9 +211,9 @@ module MessagebusApi
             rescue JSON::ParserError
               nil
             end
-            raise MessagebusRubyApi::RemoteServerError.new("#{response.code.to_s}:#{rest_http_error_message(response.code.to_s)}")
+            raise MessagebusApi::RemoteServerError.new("#{response.code.to_s}:#{rest_http_error_message(response.code.to_s)}")
           else
-            raise MessagebusRubyApi::RemoteServerError.new("#{response.code.to_s}:#{rest_http_error_message(response.code.to_s)}")
+            raise MessagebusApi::RemoteServerError.new("#{response.code.to_s}:#{rest_http_error_message(response.code.to_s)}")
           end
         else
           raise "Unexpected HTTP Response: #{response.class.name}"

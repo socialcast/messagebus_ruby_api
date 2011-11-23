@@ -1,4 +1,4 @@
-module MessagebusRubyApi
+module MessagebusApi
 
   class APIParameterError < StandardError
     def initialize(problematic_parameter="")
