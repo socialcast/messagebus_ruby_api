@@ -25,7 +25,7 @@ end
 client = MessagebusInstance.instance.client
 
 # send an email with the headers and params set
-message1 = { :toEmail => 'jane.smieth@example.com',
+message1 = { :toEmail => 'jane.smith@example.com',
       :toName => 'Jane Smith',
       :fromEmail => 'noreply@messagebus.com',
       :fromName => 'Example Corporation',
