@@ -18,4 +18,6 @@ Gem::Specification.new do |s|
   s.test_files    = Dir.glob("{spec}/**/*")
   s.executables   = []
   s.require_paths = ["lib"]
+
+  s.license = 'APACHE2'
 end
